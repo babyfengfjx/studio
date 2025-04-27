@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -26,10 +27,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { TimelineEvent } from "@/types/event";
 
+// Zod schema with Chinese validation messages
 const formSchema = z.object({
-  title: z.string().min(1, { message: "Title is required." }).max(100),
-  description: z.string().max(500).optional(),
+  title: z.string().min(1, { message: "标题不能为空。" }).max(100, { message: "标题不能超过100个字符。" }),
+  description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(),
 });
+
 
 type EditEventFormProps = {
   event: TimelineEvent | null;
@@ -50,18 +53,18 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   // Reset form when the event prop changes (e.g., when opening the dialog with a new event)
   React.useEffect(() => {
-    if (event) {
+    if (event && isOpen) { // Reset only if event exists and dialog is open
       form.reset({
         title: event.title,
         description: event.description ?? "",
       });
-    } else {
-      form.reset({ // Reset to empty if no event is provided (e.g., on close)
+    } else if (!isOpen) { // Reset to empty if dialog is closed
+      form.reset({
         title: "",
         description: "",
       });
     }
-  }, [event, form]);
+  }, [event, isOpen, form]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -73,10 +76,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   // Handle closing without saving
   const handleOpenChange = (open: boolean) => {
-    if (!open) {
-       // Optionally reset form on close if needed, though useEffect already handles much of this
-       form.reset({ title: event?.title ?? "", description: event?.description ?? "" });
-    }
+    // Resetting is handled by useEffect now
     onOpenChange(open);
   }
 
@@ -86,9 +86,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
+          <DialogTitle>编辑事件</DialogTitle> {/* Translate */}
           <DialogDescription>
-            Update the details for your timeline event.
+            更新您的时间轴事件的详细信息。 {/* Translate */}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -98,9 +98,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>标题</FormLabel> {/* Translate */}
                   <FormControl>
-                    <Input placeholder="Meeting with team" {...field} />
+                    <Input placeholder="例如：团队会议" {...field} /> {/* Translate placeholder */}
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -111,21 +111,21 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>描述 (可选)</FormLabel> {/* Translate */}
                   <FormControl>
                     <Textarea
-                      placeholder="Discuss project progress..."
+                      placeholder="例如：讨论项目进展..."
                       className="resize-none"
                       {...field}
-                    />
+                    /> {/* Translate placeholder */}
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
-                <Button type="submit">Save Changes</Button>
+                <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button> {/* Translate */}
+                <Button type="submit">保存更改</Button> {/* Translate */}
              </DialogFooter>
           </form>
         </Form>

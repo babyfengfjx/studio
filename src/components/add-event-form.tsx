@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -28,9 +29,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { TimelineEvent } from "@/types/event";
 
+// Zod schema with Chinese validation messages
 const formSchema = z.object({
-  title: z.string().min(1, { message: "Title is required." }).max(100),
-  description: z.string().max(500).optional(),
+  title: z.string().min(1, { message: "标题不能为空。" }).max(100, { message: "标题不能超过100个字符。" }),
+  description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(),
 });
 
 type AddEventFormProps = {
@@ -59,14 +61,14 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
       <DialogTrigger asChild>
         <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground fixed bottom-8 right-8 shadow-lg rounded-full p-4 h-auto aspect-square">
           <Plus className="h-6 w-6" />
-          <span className="sr-only">Add Event</span>
+          <span className="sr-only">添加事件</span> {/* Translate sr-only text */}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Event</DialogTitle>
+          <DialogTitle>添加新事件</DialogTitle> {/* Translate */}
           <DialogDescription>
-            Fill in the details for your new timeline event.
+            填写新时间轴事件的详细信息。 {/* Translate */}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -76,9 +78,9 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>标题</FormLabel> {/* Translate */}
                   <FormControl>
-                    <Input placeholder="Meeting with team" {...field} />
+                    <Input placeholder="例如：团队会议" {...field} /> {/* Translate placeholder */}
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -89,20 +91,20 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>描述 (可选)</FormLabel> {/* Translate */}
                   <FormControl>
                     <Textarea
-                      placeholder="Discuss project progress..."
+                      placeholder="例如：讨论项目进展..."
                       className="resize-none"
                       {...field}
-                    />
+                    /> {/* Translate placeholder */}
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
              <DialogFooter>
-                <Button type="submit">Add Event</Button>
+                <Button type="submit">添加事件</Button> {/* Translate */}
              </DialogFooter>
           </form>
         </Form>

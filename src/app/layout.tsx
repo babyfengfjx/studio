@@ -6,8 +6,8 @@ import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' }); // Define variable for Tailwind
 
 export const metadata: Metadata = {
-  title: 'TimeFlow - Your Personal Timeline', // Updated title
-  description: 'Organize your events chronologically with TimeFlow.', // Updated description
+  title: '时光流 - 您的个人时间轴', // Updated title in Chinese
+  description: '使用时光流按时间顺序整理您的事件。', // Updated description in Chinese
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="zh-CN"> {/* Set language to Chinese */}
       {/* Apply the font variable to the body */}
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}

@@ -21,10 +21,10 @@ export default function Home() {
       id: crypto.randomUUID(), // Generate a unique ID
       timestamp: new Date(), // Set timestamp to current time
     };
-    setEvents((prevEvents) => [...prevEvents, newEvent]);
+    setEvents((prevEvents) => [...prevEvents, newEvent].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())); // Keep sorted
     toast({
-        title: "Event Added",
-        description: `"${newEvent.title}" added to your timeline.`,
+        title: "事件已添加",
+        description: `事件 "${newEvent.title}" 已添加到您的时间轴。`,
       });
   };
 
@@ -32,8 +32,8 @@ export default function Home() {
     const eventToDelete = events.find(e => e.id === id);
     setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id));
      toast({
-        title: "Event Deleted",
-        description: `"${eventToDelete?.title}" removed from your timeline.`,
+        title: "事件已删除",
+        description: `事件 "${eventToDelete?.title}" 已从您的时间轴移除。`,
         variant: "destructive",
       });
   };
@@ -49,21 +49,28 @@ export default function Home() {
     setEvents((prevEvents) =>
       prevEvents.map((event) =>
         event.id === id ? { ...event, ...updatedData } : event
-      )
+      ).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()) // Keep sorted
     );
      toast({
-        title: "Event Updated",
-        description: `"${updatedData.title}" has been updated.`,
+        title: "事件已更新",
+        description: `事件 "${updatedData.title}" 已更新。`,
       });
     // Close the dialog after successful edit
     setIsEditDialogOpen(false);
     setEditingEvent(null);
   };
 
+   React.useEffect(() => {
+    // Initial sort when component mounts
+    setEvents(prevEvents => [...prevEvents].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
+  }, []);
+
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between py-12 bg-background">
+    // Apply gradient background
+    <main className="flex min-h-screen flex-col items-center justify-between py-12 bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950">
       <div className="container mx-auto px-4">
-        <h1 className="text-4xl font-bold text-center mb-10 text-foreground">TimeFlow</h1>
+        <h1 className="text-4xl font-bold text-center mb-10 text-foreground">时光流</h1> {/* Title in Chinese */}
         <Timeline
           events={events}
           onEditEvent={handleOpenEditDialog} // Pass handler to open edit dialog
