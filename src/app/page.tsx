@@ -2,7 +2,8 @@
 'use client';
 
 import * as React from 'react';
-import { Search } from 'lucide-react'; // Import Search icon for trigger button
+import { Search, X } from 'lucide-react'; // Import Search and X icons
+import { motion, AnimatePresence } from 'framer-motion'; // Import motion components
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { Timeline } from '@/components/timeline';
@@ -13,13 +14,6 @@ import { QuickAddEventForm } from '@/components/quick-add-event-form';
 import { mockEvents } from '@/data/mock-events';
 import type { TimelineEvent, EventType } from '@/types/event';
 import { Button } from '@/components/ui/button'; // Import Button
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"; // Import Dialog components
 
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
@@ -58,7 +52,7 @@ export default function Home() {
   const [isClient, setIsClient] = React.useState(false); // State to track client-side rendering
   const [searchTerm, setSearchTerm] = React.useState(''); // State for search term
   const [selectedEventType, setSelectedEventType] = React.useState<EventType | 'all'>('all'); // State for filter
-  const [isSearchFilterOpen, setIsSearchFilterOpen] = React.useState(false); // State for search/filter dialog
+  const [isSearchExpanded, setIsSearchExpanded] = React.useState(false); // State for search expansion
   const { toast } = useToast();
 
    // Set isClient to true only on the client side and load initial data
@@ -161,15 +155,64 @@ export default function Home() {
   return (
     // Apply gradient background
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
-      {/* Main Content Area */}
-      {/* Increased pb-[220px] to accommodate search button next to form */}
-      <div className="container mx-auto px-4 w-full max-w-4xl pb-[220px]">
+      {/* Main Content Area - Reduced bottom padding */}
+      <div className="container mx-auto px-4 w-full max-w-4xl pb-[150px]"> {/* Adjusted padding */}
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
-        {/* REMOVED Sticky Search and Filter Section */}
+
+         {/* Search Trigger / Expanded Search Bar Area */}
+        <div className="mb-6 flex justify-center relative h-10 items-center">
+          <AnimatePresence mode="wait">
+            {isSearchExpanded ? (
+              <motion.div
+                key="search-bar"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="flex items-center gap-2 p-2 rounded-lg bg-background/80 backdrop-blur-sm shadow-md border border-border w-full max-w-md"
+              >
+                <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
+                <FilterControls
+                  selectedType={selectedEventType}
+                  onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
+                  className="w-auto flex-shrink-0" // Adjust styling for inline display
+                />
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 flex-shrink-0"
+                    onClick={() => setIsSearchExpanded(false)}
+                    aria-label="关闭搜索"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="search-trigger"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full bg-background/70 hover:bg-accent backdrop-blur-sm shadow border border-border"
+                  onClick={() => setIsSearchExpanded(true)}
+                  aria-label="打开搜索与筛选"
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
 
         {/* Timeline Section */}
-        <div className="mt-0"> {/* Removed margin top as sticky header is gone */}
+        <div className="mt-0"> {/* Removed margin top */}
              <Timeline
               events={filteredEvents} // Pass filtered events
               onEditEvent={handleOpenEditDialog} // Pass handler to open edit dialog
@@ -179,35 +222,14 @@ export default function Home() {
 
       </div>
 
-       {/* Quick Add Event Form & Search Trigger - Fixed at the bottom */}
+       {/* Quick Add Event Form - Fixed at the bottom */}
        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/90 backdrop-blur-md border-t border-border shadow-lg">
          <div className="container mx-auto max-w-4xl flex items-end gap-2"> {/* Use flex to align items */}
-           {/* Quick Add Form takes most space */}
+           {/* Quick Add Form takes full space */}
            <div className="flex-grow">
              <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
-           {/* Search/Filter Trigger Button */}
-           <Dialog open={isSearchFilterOpen} onOpenChange={setIsSearchFilterOpen}>
-             <DialogTrigger asChild>
-               <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0 mb-[3px]"> {/* Match height roughly */}
-                 <Search className="h-5 w-5" />
-                 <span className="sr-only">搜索与筛选</span>
-               </Button>
-             </DialogTrigger>
-             <DialogContent className="sm:max-w-[425px]">
-               <DialogHeader>
-                 <DialogTitle>搜索与筛选</DialogTitle>
-               </DialogHeader>
-               <div className="grid gap-4 py-4">
-                  <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-                  <FilterControls
-                    selectedType={selectedEventType}
-                    onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
-                  />
-               </div>
-               {/* Optional: Add a footer button to close */}
-             </DialogContent>
-           </Dialog>
+            {/* REMOVED Search/Filter Trigger Button from here */}
          </div>
        </div>
 

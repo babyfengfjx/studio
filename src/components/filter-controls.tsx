@@ -25,18 +25,25 @@ const getEventTypeLabel = (eventType: EventType | 'all'): string => {
     case 'note': return '笔记';
     case 'todo': return '待办';
     case 'schedule': return '日程';
-    case 'all': return '所有类型';
+    case 'all': return '全部'; // Shortened label for 'all'
     default: return '事件';
   }
 };
 
 export function FilterControls({ selectedType, onTypeChange, className, ...props }: FilterControlsProps) {
   return (
-    <div className={cn("grid gap-2", className)} {...props}>
-      <Label htmlFor="event-type-filter">按类型筛选</Label>
+    <div className={cn("flex items-center gap-1", className)} {...props}> {/* Use flex and small gap */}
+      {/* Hidden label for accessibility, or keep visible if preferred */}
+       <Label htmlFor="event-type-filter" className="sr-only">按类型筛选</Label>
+
       <Select value={selectedType} onValueChange={onTypeChange}>
-        <SelectTrigger id="event-type-filter" className="w-full"> {/* Use full width in dialog */}
-          <SelectValue placeholder="按类型筛选..." />
+        <SelectTrigger
+          id="event-type-filter"
+          className="h-8 w-auto px-2 py-1 text-xs border-0 bg-transparent shadow-none focus:ring-0" // Smaller height, padding, text size, less visual clutter
+          aria-label="筛选事件类型" // Aria label for the trigger itself
+        >
+          <ListFilter className="h-3 w-3 mr-1" /> {/* Smaller icon */}
+          <SelectValue placeholder="筛选..." />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">
