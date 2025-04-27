@@ -16,17 +16,16 @@ const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
 
 
 export default function Home() {
-  const [events, setEvents] = React.useState<TimelineEvent[]>(sortEventsDescending(mockEvents)); // Initial sort
+  const [events, setEvents] = React.useState<TimelineEvent[]>([]); // Start with empty, populate on client
   const [editingEvent, setEditingEvent] = React.useState<TimelineEvent | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [isClient, setIsClient] = React.useState(false); // State to track client-side rendering
   const { toast } = useToast();
 
-   // Set isClient to true only on the client side
+   // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
     setIsClient(true);
-    // Initial sort when component mounts (already done in useState, but good practice for hydration)
-    setEvents(prevEvents => sortEventsDescending(prevEvents));
+    setEvents(sortEventsDescending(mockEvents)); // Load and sort mock data
   }, []);
 
 
@@ -62,16 +61,16 @@ export default function Home() {
   };
 
   // Function to handle the actual edit submission
-  const handleEditEvent = (id: string, updatedData: Omit<TimelineEvent, 'id' | 'timestamp'>) => {
+  // Accepts Partial update data
+  const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
     setEvents((prevEvents) =>
-       // Map to update the event and resort descending
       sortEventsDescending(prevEvents.map((event) =>
-        event.id === id ? { ...event, ...updatedData } : event
+        event.id === id ? { ...event, ...updatedData } : event // Merge partial updates
       ))
     );
      toast({
         title: "事件已更新",
-        description: `事件 "${updatedData.title}" 已更新。`,
+        description: `事件 "${updatedData.title ?? events.find(e => e.id === id)?.title}" 已更新。`, // Use existing title if not updated
       });
     // Close the dialog after successful edit
     setIsEditDialogOpen(false);
@@ -79,10 +78,14 @@ export default function Home() {
   };
 
 
-  // Render only on the client to avoid hydration issues with Date formatting
+  // Render only on the client to avoid hydration issues with Date formatting and initial load
   if (!isClient) {
      // You could show a loading spinner or skeleton here
-    return null;
+     return (
+        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950">
+          <p>加载中...</p> {/* Basic loading indicator */}
+        </main>
+      );
   }
 
 
