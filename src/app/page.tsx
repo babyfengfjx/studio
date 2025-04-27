@@ -4,11 +4,12 @@
 import * as React from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
-import { AddEventForm } from '@/components/add-event-form';
+// Removed AddEventForm import
 import { Timeline } from '@/components/timeline';
 import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar'; // Import SearchBar
 import { FilterControls } from '@/components/filter-controls'; // Import FilterControls
+import { QuickAddEventForm } from '@/components/quick-add-event-form'; // Import QuickAddEventForm
 import { mockEvents } from '@/data/mock-events';
 import type { TimelineEvent, EventType } from '@/types/event';
 
@@ -44,11 +45,16 @@ export default function Home() {
   }, []);
 
 
-  const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp'>) => {
+  // Updated handleAddEvent to match QuickAddEventForm output
+  const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'description'> & { description?: string }) => {
     const newEvent: TimelineEvent = {
-      ...newEventData,
       id: crypto.randomUUID(), // Generate a unique ID
       timestamp: new Date(), // Set timestamp to current time
+      title: newEventData.title, // Title is now mandatory from QuickAddForm
+      description: newEventData.description, // Description is optional
+      eventType: newEventData.eventType,
+      imageUrl: newEventData.imageUrl,
+      attachment: newEventData.attachment,
     };
     // Add new event and resort descending
     setAllEvents((prevEvents) => sortEventsDescending([...prevEvents, newEvent]));
@@ -121,8 +127,13 @@ export default function Home() {
   return (
     // Apply gradient background
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative"> {/* Add relative positioning */}
-      <div className="container mx-auto px-4 w-full">
+      <div className="container mx-auto px-4 w-full max-w-4xl"> {/* Limit width for better layout */}
         <h1 className="text-4xl font-bold text-center mb-6 text-foreground">时光流</h1> {/* Title in Chinese */}
+
+        {/* Quick Add Event Form */}
+        <div className="mb-8">
+          <QuickAddEventForm onAddEvent={handleAddEvent} />
+        </div>
 
         {/* Search and Filter Section */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8 sticky top-4 z-30 bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow"> {/* Added sticky positioning */}
@@ -143,7 +154,7 @@ export default function Home() {
         </div>
 
       </div>
-      <AddEventForm onAddEvent={handleAddEvent} />
+      {/* Removed the floating AddEventForm DialogTrigger */}
        {/* Edit Event Dialog */}
        <EditEventForm
         event={editingEvent}
