@@ -9,7 +9,7 @@ import { zhCN } from 'date-fns/locale'; // Import Chinese locale
 import Image from 'next/image'; // Import next/image
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'; // Removed CardDescription import as it's not used directly here
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,7 +59,9 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
 
         <AnimatePresence initial={false}>
             {events.map((event, index) => {
-              const isLeftAligned = index % 2 !== 0; // Determine alignment
+              // If index is even, card is on the right, timestamp on the left.
+              // If index is odd, card is on the left, timestamp on the right.
+              const isCardRightAligned = index % 2 === 0;
 
               return (
                 <motion.div
@@ -69,47 +71,43 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    className="mb-12 flex justify-between items-start w-full relative" // Increased mb
-                    style={{ zIndex: events.length - index }} // Ensure later (visually upper) items overlap earlier ones
+                    // Main container for the row, using flex to align items
+                    className={cn(
+                        "mb-12 flex items-center w-full relative", // Use items-center for vertical alignment
+                        isCardRightAligned ? 'flex-row' : 'flex-row-reverse' // Change order: timestamp first or card first
+                     )}
+                    style={{ zIndex: events.length - index }} // Ensure later items overlap for visual correctness
                 >
-                    {/* Timeline Dot - Position adjusted slightly */}
-                    {/* Ensure dot is visually above the line and card */}
-                    <div className="absolute left-1/2 top-1 -translate-x-1/2 z-20">
-                    <div className="bg-accent rounded-full p-1.5 shadow-md ring-2 ring-background"> {/* Adjusted padding */}
+                    {/* Timeline Dot - Centered vertically relative to the row */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                      <div className="bg-accent rounded-full p-1.5 shadow-md ring-2 ring-background"> {/* Adjusted padding */}
                         {getEventTypeIcon(event.eventType)}
-                    </div>
+                      </div>
                     </div>
 
-                    {/* Left or Right Column */}
+                    {/* Timestamp Column */}
                     <div className={cn(
-                        "w-[calc(50%-2rem)] flex flex-col", // Adjust width and use flex-col
-                         isLeftAligned ? 'items-start text-left' : 'items-end text-right' // Align items based on side
+                        "w-1/2", // Takes up half the width
+                        isCardRightAligned ? 'pr-8 text-right' : 'pl-8 text-left' // Padding away from center line, text aligned to outside
                     )}>
-                        {/* Timestamp Area */}
-                         <div className={cn(
-                            "text-sm text-muted-foreground mb-2 px-2 py-1 rounded-md bg-background/50 backdrop-blur-sm shadow-sm border", // Add subtle background and border
-                             isLeftAligned ? 'self-start' : 'self-end' // Align self
-                         )}>
-                            {/* Format date using Chinese locale and 24-hour format */}
-                            {format(event.timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN })}
-                        </div>
-
-                        {/* Spacer for the other side */}
-                         {!isLeftAligned && <div className="flex-grow"></div>}
+                      <div className={cn(
+                          "inline-block text-sm text-muted-foreground px-2 py-1 rounded-md bg-background/50 backdrop-blur-sm shadow-sm border", // Add subtle background and border
+                          // No specific self-alignment needed as parent controls horizontal alignment
+                      )}>
+                        {/* Format date using Chinese locale and 24-hour format */}
+                        {format(event.timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN })}
+                      </div>
                     </div>
 
-
-                    {/* The other side - Card Area */}
+                    {/* Card Column */}
                      <div className={cn(
-                         "w-[calc(50%-2rem)]", // Adjust width
-                         isLeftAligned ? 'pl-8' : 'pr-8' // Add padding towards the center line
+                         "w-1/2", // Takes up the other half
+                         isCardRightAligned ? 'pl-8' : 'pr-8' // Padding away from center line
                      )}>
-                        {/* Spacer for the other side's timestamp */}
-                         {isLeftAligned && <div className="h-8 mb-2"></div>} {/* Adjust height to match timestamp */}
-
                         <Card className={cn(
-                            "shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10 for card content, flex col
-                            isLeftAligned ? 'text-left' : 'text-right' // Align text inside card based on side
+                            "shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10, flex col
+                            // Text alignment inside the card is always left now, simplicity
+                             'text-left'
                         )}>
                             {/* Image Section (if imageUrl exists) */}
                             {event.imageUrl && (
@@ -118,7 +116,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                                         src={event.imageUrl} // Use event imageUrl
                                         alt={`事件 "${event.title}" 的图片`}
                                         fill
-                                        className="object-cover" // Cover the container
+                                        className="object-cover rounded-t-lg" // Cover the container, rounded top corners
                                     />
                                     {/* Optional: Add a small indicator */}
                                     <div className="absolute bottom-1 right-1 bg-black/50 text-white p-1 rounded">
@@ -127,75 +125,68 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                                 </div>
                             )}
 
-                            {/* Card Header */}
+                            {/* Card Header - Title and Actions */}
                             <CardHeader className="pb-3 pt-4 flex-shrink-0"> {/* Adjusted padding */}
-                                <div className={cn(
-                                    "flex items-start", // Removed justify-between here
-                                    isLeftAligned ? 'justify-between flex-row' : 'justify-between flex-row-reverse' // Adjust order and justification
-                                )}>
-                                <div className={cn(
-                                    "flex-1 min-w-0", // Ensure title/desc take space
-                                    isLeftAligned ? 'mr-2' : 'ml-2' // Add margin between text and actions
-                                    )}>
-                                    <CardTitle className="text-lg font-semibold">{event.title}</CardTitle>
-                                    {/* Timestamp moved outside */}
-                                </div>
-                                <div className={`flex space-x-1 flex-shrink-0`}> {/* Actions */}
-                                    {/* Edit button */}
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditEvent(event)} aria-label="编辑事件"> {/* Translate aria-label */}
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>编辑事件</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                    {/* Delete Button */}
-                                    <AlertDialog>
+                                <div className="flex items-start justify-between"> {/* Items start, space between title block and actions */}
+                                    {/* Title */}
+                                    <CardTitle className="text-lg font-semibold flex-1 min-w-0 mr-2">{event.title}</CardTitle>
+                                    {/* Actions */}
+                                    <div className="flex space-x-1 flex-shrink-0">
+                                        {/* Edit button */}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                        aria-label="删除事件" // Translate aria-label
-                                                        onClick={() => setEventToDelete(event)} // Set the event to delete on click
-                                                        >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditEvent(event)} aria-label="编辑事件"> {/* Translate aria-label */}
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>删除事件</p>
+                                                <p>编辑事件</p>
                                             </TooltipContent>
                                         </Tooltip>
-                                        {/* Conditionally render content based on selected event */}
-                                        {eventToDelete?.id === event.id && (
-                                            <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>确定要删除吗？</AlertDialogTitle> {/* Translate */}
-                                                <AlertDialogDescription>
-                                                此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}"、标题为 "{eventToDelete.title}" 的事件。 {/* Translate and add type */}
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel onClick={() => setEventToDelete(null)}>取消</AlertDialogCancel> {/* Translate & clear state on cancel */}
-                                                <AlertDialogAction
-                                                    className="bg-destructive hover:bg-destructive/90"
-                                                    onClick={() => {
-                                                        onDeleteEvent(eventToDelete.id);
-                                                        setEventToDelete(null); // Clear state after deletion
-                                                        }}>
-                                                    删除 {/* Translate */}
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        )}
-                                    </AlertDialog>
-                                </div>
+                                        {/* Delete Button */}
+                                        <AlertDialog>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                            aria-label="删除事件" // Translate aria-label
+                                                            onClick={() => setEventToDelete(event)} // Set the event to delete on click
+                                                            >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>删除事件</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                            {/* Conditionally render content based on selected event */}
+                                            {eventToDelete?.id === event.id && (
+                                                <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>确定要删除吗？</AlertDialogTitle> {/* Translate */}
+                                                    <AlertDialogDescription>
+                                                    此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}"、标题为 "{eventToDelete.title}" 的事件。 {/* Translate and add type */}
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel onClick={() => setEventToDelete(null)}>取消</AlertDialogCancel> {/* Translate & clear state on cancel */}
+                                                    <AlertDialogAction
+                                                        className="bg-destructive hover:bg-destructive/90"
+                                                        onClick={() => {
+                                                            onDeleteEvent(eventToDelete.id);
+                                                            setEventToDelete(null); // Clear state after deletion
+                                                            }}>
+                                                        删除 {/* Translate */}
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            )}
+                                        </AlertDialog>
+                                    </div>
                                 </div>
                             </CardHeader>
 
@@ -209,8 +200,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                             {/* Card Footer (Attachment) */}
                             {event.attachment && (
                                 <CardFooter className={cn(
-                                    "pt-0 pb-3 border-t mt-auto", // Added border-top and margin-top auto
-                                    isLeftAligned ? 'flex justify-start' : 'flex justify-end' // Align attachment based on side
+                                    "pt-0 pb-3 border-t mt-auto flex justify-start" // Aligned to start
                                 )}>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
@@ -228,26 +218,6 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                             )}
                         </Card>
                      </div>
-
-                    {/* Explicitly place the other column based on alignment */}
-                    {!isLeftAligned && (
-                         <div className={cn(
-                            "w-[calc(50%-2rem)] flex flex-col",
-                            'items-start text-left'
-                         )}>
-                            {/* Timestamp Area */}
-                            <div className={cn(
-                                "text-sm text-muted-foreground mb-2 px-2 py-1 rounded-md bg-background/50 backdrop-blur-sm shadow-sm border",
-                                'self-start'
-                             )}>
-                                {format(event.timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN })}
-                            </div>
-                             {/* Spacer */}
-                             <div className="flex-grow"></div>
-                         </div>
-                    )}
-
-
                 </motion.div>
                 );
             })}
@@ -267,3 +237,4 @@ const getEventTypeLabel = (eventType: EventType): string => {
     default: return '事件';
   }
 };
+

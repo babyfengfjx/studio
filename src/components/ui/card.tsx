@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -31,13 +32,13 @@ CardHeader.displayName = "CardHeader"
 
 // Updated CardTitle to use h3 for semantic correctness
 const CardTitle = React.forwardRef<
-  HTMLParagraphElement, // Changed from HTMLDivElement
-  React.HTMLAttributes<HTMLHeadingElement> // Changed from HTMLDivElement
+  HTMLParagraphElement, // Keep as paragraph element ref type for compatibility
+  React.HTMLAttributes<HTMLHeadingElement> // Use heading attributes
 >(({ className, ...props }, ref) => (
-  <h3 // Changed from div to h3
+  <h3 // Use h3 tag for semantic structure
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "text-lg font-semibold leading-none tracking-tight", // Use text-lg for consistency
       className
     )}
     {...props}
@@ -45,18 +46,20 @@ const CardTitle = React.forwardRef<
 ))
 CardTitle.displayName = "CardTitle"
 
-// Updated CardDescription to use p for semantic correctness
+// CardDescription is removed from exports as it's not directly used in timeline.tsx anymore.
+// It remains here for potential future use or use in other components.
 const CardDescription = React.forwardRef<
-  HTMLParagraphElement, // Changed from HTMLDivElement
-  React.HTMLAttributes<HTMLParagraphElement> // Changed from HTMLDivElement
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p // Changed from div to p
+  <p
     ref={ref}
     className={cn("text-sm text-muted-foreground", className)}
     {...props}
   />
 ))
 CardDescription.displayName = "CardDescription"
+
 
 const CardContent = React.forwardRef<
   HTMLDivElement,
@@ -78,4 +81,6 @@ const CardFooter = React.forwardRef<
 ))
 CardFooter.displayName = "CardFooter"
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+// Export Card, CardHeader, CardContent, CardFooter, CardTitle
+// CardDescription is intentionally not exported here anymore based on the timeline refactor.
+export { Card, CardHeader, CardFooter, CardTitle, CardContent }
