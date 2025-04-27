@@ -100,7 +100,16 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                 <FormItem>
                   <FormLabel>标题</FormLabel> {/* Translate */}
                   <FormControl>
-                    <Input placeholder="例如：团队会议" {...field} /> {/* Translate placeholder */}
+                    {/* Pass props explicitly instead of spreading */}
+                     <Input
+                      placeholder="例如：团队会议"
+                      {...field} // Keep the spread here for necessary form handling props
+                      value={field.value ?? ""} // Ensure value is always a string
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -113,11 +122,17 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                 <FormItem>
                   <FormLabel>描述 (可选)</FormLabel> {/* Translate */}
                   <FormControl>
-                    <Textarea
+                    {/* Pass props explicitly instead of spreading */}
+                     <Textarea
                       placeholder="例如：讨论项目进展..."
                       className="resize-none"
-                      {...field}
-                    /> {/* Translate placeholder */}
+                      {...field} // Keep the spread here
+                      value={field.value ?? ""} // Ensure value is always a string
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -80,7 +80,16 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
                 <FormItem>
                   <FormLabel>标题</FormLabel> {/* Translate */}
                   <FormControl>
-                    <Input placeholder="例如：团队会议" {...field} /> {/* Translate placeholder */}
+                    {/* Pass props explicitly */}
+                     <Input
+                      placeholder="例如：团队会议"
+                      {...field} // Keep the spread for necessary form props
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -93,11 +102,17 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
                 <FormItem>
                   <FormLabel>描述 (可选)</FormLabel> {/* Translate */}
                   <FormControl>
-                    <Textarea
+                    {/* Pass props explicitly */}
+                     <Textarea
                       placeholder="例如：讨论项目进展..."
                       className="resize-none"
-                      {...field}
-                    /> {/* Translate placeholder */}
+                      {...field} // Keep the spread for necessary form props
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
