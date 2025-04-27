@@ -36,7 +36,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"; // Import Select components
 import type { TimelineEvent, EventType } from "@/types/event";
-import Image from 'next/image'; // Import next/image
+// Removed next/image import as preview is removed
 
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -101,7 +101,7 @@ type AddEventFormProps = {
 
 export function AddEventForm({ onAddEvent }: AddEventFormProps) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(null);
+  // Removed image preview state: const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(null);
   const [attachmentName, setAttachmentName] = React.useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -115,34 +115,10 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
     },
   });
 
-  const imageFile = form.watch("image");
+  // Removed imageFile watch: const imageFile = form.watch("image");
   const attachmentFile = form.watch("attachment");
 
-  // Update image preview
-  React.useEffect(() => {
-    let objectUrl: string | null = null; // Store object URL to revoke
-    if (imageFile && imageFile instanceof FileList && imageFile.length > 0) {
-      const file = imageFile[0];
-      if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_FILE_SIZE) {
-        objectUrl = URL.createObjectURL(file);
-        setImagePreviewUrl(objectUrl);
-      } else {
-         // Clear preview if file is invalid after selection (though Zod should prevent submission)
-         setImagePreviewUrl(null);
-      }
-
-    } else {
-      setImagePreviewUrl(null);
-    }
-     // Cleanup function to revoke object URL
-    return () => {
-        if (objectUrl) {
-             URL.revokeObjectURL(objectUrl);
-             setImagePreviewUrl(null); // Clear state on cleanup as well
-        }
-    }
-  }, [imageFile]); // Rerun when imageFile changes
-
+  // Removed image preview useEffect
 
    // Update attachment name display
    React.useEffect(() => {
@@ -197,7 +173,7 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
 
     // Reset form and previews
     form.reset();
-    setImagePreviewUrl(null);
+    // Removed image preview reset: setImagePreviewUrl(null);
     setAttachmentName(null);
     setIsOpen(false);
   }
@@ -218,7 +194,7 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
         if (!open) {
              // Reset form and previews if dialog is closed without submitting
              form.reset();
-             setImagePreviewUrl(null);
+             // Removed image preview reset: setImagePreviewUrl(null);
              setAttachmentName(null);
         }
         setIsOpen(open);
@@ -322,46 +298,37 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
                      <ImageIcon className="h-4 w-4" /> 图片 (可选, 最多 5MB)
                     </FormLabel>
                   <FormControl>
-                    <Input
-                       type="file"
-                       accept={ALLOWED_IMAGE_TYPES.join(",")} // Set accepted types
-                       onChange={(e) => onChange(e.target.files)} // Pass FileList to RHF
-                       onBlur={onBlur}
-                       name={name}
-                       ref={ref}
-                       className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                     />
+                    <div className="flex items-center gap-2">
+                        <Input
+                        type="file"
+                        accept={ALLOWED_IMAGE_TYPES.join(",")} // Set accepted types
+                        onChange={(e) => onChange(e.target.files)} // Pass FileList to RHF
+                        onBlur={onBlur}
+                        name={name}
+                        ref={ref}
+                        className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                         {/* Clear Image Button */}
+                         {form.getValues("image") && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={clearImage}
+                                aria-label="清除图片"
+                            >
+                                <XCircle className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-             {/* Image Preview */}
-             {imagePreviewUrl && (
-               <div className="mt-2 space-y-2">
-                 <p className="text-sm font-medium">图片预览:</p>
-                 <div className="relative group w-full h-48"> {/* Fixed height container */}
-                    <Image
-                        src={imagePreviewUrl}
-                        alt="图片预览"
-                        fill // Use fill to cover the container
-                        className="rounded-md object-cover border" // Add object-cover
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70 rounded-full h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={clearImage}
-                        aria-label="清除图片"
-                    >
-                        <XCircle className="h-4 w-4" />
-                    </Button>
-                 </div>
-
-               </div>
-             )}
+            {/* Removed Image Preview Section */}
 
 
             {/* Attachment Upload */}
@@ -374,15 +341,30 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
                       <Paperclip className="h-4 w-4" /> 附件 (可选, 最多 5MB)
                    </FormLabel>
                   <FormControl>
-                      <Input
-                        type="file"
-                        // accept={ALLOWED_ATTACHMENT_TYPES.join(",")} // Optional: specify allowed types
-                        onChange={(e) => onChange(e.target.files)}
-                        onBlur={onBlur}
-                        name={name}
-                        ref={ref}
-                         className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
-                      />
+                     <div className="flex items-center gap-2">
+                        <Input
+                            type="file"
+                            // accept={ALLOWED_ATTACHMENT_TYPES.join(",")} // Optional: specify allowed types
+                            onChange={(e) => onChange(e.target.files)}
+                            onBlur={onBlur}
+                            name={name}
+                            ref={ref}
+                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
+                        />
+                         {/* Clear Attachment Button */}
+                         {form.getValues("attachment") && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={clearAttachment}
+                                aria-label="清除附件"
+                            >
+                                <XCircle className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                   </FormControl>
                    <FormMessage />
                 </FormItem>
@@ -391,18 +373,8 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
 
             {/* Attachment Name Display */}
             {attachmentName && (
-              <div className="mt-2 flex items-center justify-between text-sm bg-muted p-2 rounded-md">
-                <span>已选择附件: <span className="font-medium">{attachmentName}</span></span>
-                 <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                    onClick={clearAttachment}
-                    aria-label="清除附件"
-                >
-                    <XCircle className="h-4 w-4" />
-                </Button>
+              <div className="mt-2 text-sm text-muted-foreground">
+                已选择附件: <span className="font-medium text-foreground">{attachmentName}</span>
               </div>
             )}
 

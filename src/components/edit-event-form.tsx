@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck } from "lucide-react"; // Import icons
-import Image from 'next/image'; // Import next/image
+// Removed next/image import
 
 import { Button } from "@/components/ui/button";
 import {
@@ -96,7 +96,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    // Store initial values separately to manage preview states
    const [initialImageUrl, setInitialImageUrl] = React.useState<string | undefined>(undefined);
    const [initialAttachmentName, setInitialAttachmentName] = React.useState<string | undefined>(undefined);
-   const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(null);
+   // Removed image preview state: const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(null);
    const [attachmentName, setAttachmentName] = React.useState<string | null>(null);
    // Flags to track if the user wants to clear existing files
    const [clearExistingImage, setClearExistingImage] = React.useState(false);
@@ -115,7 +115,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     },
   });
 
-  const imageFile = form.watch("image");
+  // Removed imageFile watch: const imageFile = form.watch("image");
   const attachmentFile = form.watch("attachment");
 
 
@@ -132,8 +132,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         // Set initial values for preview/display
         setInitialImageUrl(event.imageUrl);
         setInitialAttachmentName(event.attachment?.name);
-        // Initially, show existing image/attachment if present
-        setImagePreviewUrl(event.imageUrl ?? null);
+        // Initially, show existing attachment if present
         setAttachmentName(event.attachment?.name ?? null);
         // Reset clearing flags
         setClearExistingImage(false);
@@ -150,7 +149,6 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         });
         setInitialImageUrl(undefined);
         setInitialAttachmentName(undefined);
-        setImagePreviewUrl(null);
         setAttachmentName(null);
         setClearExistingImage(false);
         setClearExistingAttachment(false);
@@ -158,36 +156,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 }, [event, isOpen, form]);
 
 
-  // Update image preview based on selected file
-  React.useEffect(() => {
-     let objectUrl: string | null = null; // Store object URL to revoke
-    if (imageFile && imageFile instanceof FileList && imageFile.length > 0) {
-      const file = imageFile[0];
-       if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_FILE_SIZE) {
-            objectUrl = URL.createObjectURL(file);
-            setImagePreviewUrl(objectUrl);
-            // If a new image is selected, don't clear the existing one on save
-            setClearExistingImage(false);
-       } else {
-           // If file is invalid, revert to initial or clear
-           setImagePreviewUrl(initialImageUrl ?? null);
-       }
-    } else if (!clearExistingImage) {
-        // If no file selected and not explicitly cleared, show initial image
-        setImagePreviewUrl(initialImageUrl ?? null);
-    } else {
-         // If cleared, show nothing
-         setImagePreviewUrl(null);
-    }
-
-     // Cleanup function to revoke object URL
-    return () => {
-        if (objectUrl) {
-             URL.revokeObjectURL(objectUrl);
-             setImagePreviewUrl(null); // Clear state on cleanup as well
-        }
-    }
-  }, [imageFile, initialImageUrl, clearExistingImage]); // Depend on clear flag
+  // Removed image preview useEffect
 
 
    // Update attachment name display based on selected file
@@ -223,8 +192,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     };
 
     // Handle Image: Upload new, clear existing, or keep existing
-    if (values.image && values.image instanceof FileList && values.image.length > 0) {
-        const file = values.image[0];
+    const imageInput = values.image as unknown as FileList | undefined; // Type assertion
+    if (imageInput && imageInput.length > 0) {
+        const file = imageInput[0];
         if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_FILE_SIZE) {
             updatedData.imageUrl = await new Promise((resolve) => {
                 const reader = new FileReader();
@@ -238,8 +208,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
 
      // Handle Attachment: Upload new, clear existing, or keep existing
-     if (values.attachment && values.attachment instanceof FileList && values.attachment.length > 0) {
-         const file = values.attachment[0];
+     const attachmentInput = values.attachment as unknown as FileList | undefined; // Type assertion
+     if (attachmentInput && attachmentInput.length > 0) {
+         const file = attachmentInput[0];
           if (file.size <= MAX_FILE_SIZE) {
             // In a real app, upload the file here and get a URL/identifier
             updatedData.attachment = { name: file.name };
@@ -263,7 +234,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    const handleClearImage = () => {
         form.setValue("image", undefined); // Clear file input in form
         setClearExistingImage(true); // Mark existing image for removal on save
-        // Preview cleared by useEffect
+        // Preview state removed
    };
 
     // Function to handle clearing the attachment (newly selected or existing)
@@ -370,48 +341,41 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                      <ImageIcon className="h-4 w-4" /> 图片 (可选, 最多 5MB)
                     </FormLabel>
                   <FormControl>
-                    <Input
-                       type="file"
-                       accept={ALLOWED_IMAGE_TYPES.join(",")}
-                       onChange={(e) => onChange(e.target.files)}
-                       onBlur={onBlur}
-                       name={name}
-                       ref={ref}
-                       className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                     />
+                    <div className="flex items-center gap-2">
+                        <Input
+                            type="file"
+                            accept={ALLOWED_IMAGE_TYPES.join(",")}
+                            onChange={(e) => onChange(e.target.files)}
+                            onBlur={onBlur}
+                            name={name}
+                            ref={ref}
+                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                        {/* Clear Image Button */}
+                         {(form.getValues("image") || initialImageUrl) && ( // Show clear if new file OR initial image exists
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={handleClearImage} // Use specific clear handler
+                                aria-label="清除图片"
+                            >
+                                <XCircle className="h-4 w-4" />
+                            </Button>
+                         )}
+                    </div>
                   </FormControl>
                    <FormDescription>
-                    选择新图片将会替换现有图片。
+                     {initialImageUrl && !form.getValues("image") ? "当前图片: " + initialImageUrl.substring(0,30) + "..." : ""} {/* Show initial image info */}
+                    选择新图片将会替换现有图片。点击清除按钮移除图片。
                    </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-             {/* Image Preview / Existing Image */}
-             {imagePreviewUrl && (
-               <div className="mt-2 space-y-2">
-                 <p className="text-sm font-medium">图片预览:</p>
-                 <div className="relative group w-full h-48">
-                    <Image
-                        src={imagePreviewUrl} // Shows existing or new preview
-                        alt="图片预览"
-                        fill
-                        className="rounded-md object-cover border"
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70 rounded-full h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={handleClearImage} // Use specific clear handler
-                        aria-label="清除图片"
-                    >
-                        <XCircle className="h-4 w-4" />
-                    </Button>
-                 </div>
-               </div>
-             )}
+             {/* Removed Image Preview Section */}
 
             {/* Attachment Upload */}
             <FormField
@@ -423,40 +387,38 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                       <Paperclip className="h-4 w-4" /> 附件 (可选, 最多 5MB)
                    </FormLabel>
                   <FormControl>
+                    <div className="flex items-center gap-2">
                       <Input
-                        type="file"
-                        onChange={(e) => onChange(e.target.files)}
-                        onBlur={onBlur}
-                        name={name}
-                        ref={ref}
-                         className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
-                      />
+                            type="file"
+                            onChange={(e) => onChange(e.target.files)}
+                            onBlur={onBlur}
+                            name={name}
+                            ref={ref}
+                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
+                        />
+                        {/* Clear Attachment Button */}
+                        {(form.getValues("attachment") || initialAttachmentName) && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={handleClearAttachment} // Use specific clear handler
+                                aria-label="清除附件"
+                            >
+                                <XCircle className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                   </FormControl>
                     <FormDescription>
-                     选择新附件将会替换现有附件。
+                     {initialAttachmentName && !form.getValues("attachment") ? "当前附件: " + initialAttachmentName : ""} {/* Show initial attachment name */}
+                     选择新附件将会替换现有附件。点击清除按钮移除附件。
                     </FormDescription>
                    <FormMessage />
                 </FormItem>
               )}
             />
-
-            {/* Attachment Name Display / Existing Attachment */}
-            {attachmentName && (
-              <div className="mt-2 flex items-center justify-between text-sm bg-muted p-2 rounded-md">
-                <span>当前附件: <span className="font-medium">{attachmentName}</span></span>
-                 <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                    onClick={handleClearAttachment} // Use specific clear handler
-                    aria-label="清除附件"
-                >
-                    <XCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-
 
              <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button> {/* Translate */}
