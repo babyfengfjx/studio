@@ -29,11 +29,7 @@ interface TimelineProps {
 }
 
 export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) {
-  // Events should already be sorted by the parent component (page.tsx)
-  // const sortedEvents = React.useMemo(() =>
-  //   [...events].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()),
-  //   [events]
-  // );
+  // Events are now sorted by the parent component (page.tsx) in descending order
 
   return (
     <div className="relative w-full max-w-3xl mx-auto px-4 py-8">
@@ -49,23 +45,27 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className={`mb-8 flex justify-between items-start w-full ${ // Use items-start to align dot with card top
+            className={`mb-8 flex justify-between items-start w-full relative ${ // Add relative positioning for z-index
               index % 2 === 0 ? 'flex-row-reverse text-right' : 'text-left' // Adjust text alignment
             }`}
+            style={{ zIndex: events.length - index }} // Ensure later (visually upper) items overlap earlier ones
           >
             {/* Timeline Dot - Position adjusted slightly */}
-            <div className="absolute left-1/2 -translate-x-1/2 transform translate-y-1 z-10">
+             {/* Ensure dot is visually above the line and card */}
+            <div className="absolute left-1/2 top-1 -translate-x-1/2 z-20">
                <div className="bg-accent rounded-full p-1 shadow-md ring-2 ring-background"> {/* Added ring for contrast */}
                  <CalendarClock className="h-5 w-5 text-accent-foreground" />
               </div>
             </div>
 
-            {/* Spacer */}
-            <div className="w-5/12"></div>
+
+            {/* Spacer - Keeps cards aligned */}
+            <div className="w-[calc(50%-0.5rem)]"></div> {/* Adjust spacer width */}
+
 
             {/* Event Card - Enhanced shadow and border */}
-            <div className={`w-5/12 ${index % 2 === 0 ? 'pl-4' : 'pr-4'}`}> {/* Add padding to avoid overlap with line */}
-              <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card border border-border/50"> {/* Increased shadow, subtle border */}
+            <div className={`w-[calc(50%-0.5rem)] ${index % 2 === 0 ? 'pl-4' : 'pr-4'}`}> {/* Add padding to avoid overlap with line */}
+              <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card border border-border/50 relative z-10"> {/* Increased shadow, subtle border, z-10 for card content */}
                 <CardHeader className="pb-3 pt-4"> {/* Adjusted padding */}
                    <div className={`flex justify-between items-start ${index % 2 === 0 ? 'flex-row-reverse' : ''}`}> {/* Reverse actions for right-aligned cards */}
                      <div className="flex-1 min-w-0"> {/* Ensure title/desc take space */}

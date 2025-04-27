@@ -5,15 +5,30 @@ import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { AddEventForm } from '@/components/add-event-form';
 import { Timeline } from '@/components/timeline';
-import { EditEventForm } from '@/components/edit-event-form'; // Import EditEventForm
+import { EditEventForm } from '@/components/edit-event-form';
 import { mockEvents } from '@/data/mock-events';
 import type { TimelineEvent } from '@/types/event';
 
+// Helper function to sort events by timestamp descending (newest first)
+const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
+  return [...events].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+};
+
+
 export default function Home() {
-  const [events, setEvents] = React.useState<TimelineEvent[]>(mockEvents);
+  const [events, setEvents] = React.useState<TimelineEvent[]>(sortEventsDescending(mockEvents)); // Initial sort
   const [editingEvent, setEditingEvent] = React.useState<TimelineEvent | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [isClient, setIsClient] = React.useState(false); // State to track client-side rendering
   const { toast } = useToast();
+
+   // Set isClient to true only on the client side
+  React.useEffect(() => {
+    setIsClient(true);
+    // Initial sort when component mounts (already done in useState, but good practice for hydration)
+    setEvents(prevEvents => sortEventsDescending(prevEvents));
+  }, []);
+
 
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp'>) => {
     const newEvent: TimelineEvent = {
@@ -21,7 +36,8 @@ export default function Home() {
       id: crypto.randomUUID(), // Generate a unique ID
       timestamp: new Date(), // Set timestamp to current time
     };
-    setEvents((prevEvents) => [...prevEvents, newEvent].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())); // Keep sorted
+    // Add new event and resort descending
+    setEvents((prevEvents) => sortEventsDescending([...prevEvents, newEvent]));
     toast({
         title: "事件已添加",
         description: `事件 "${newEvent.title}" 已添加到您的时间轴。`,
@@ -30,7 +46,8 @@ export default function Home() {
 
   const handleDeleteEvent = (id: string) => {
     const eventToDelete = events.find(e => e.id === id);
-    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id));
+    // Filter out the event and resort (though filtering doesn't change order)
+    setEvents((prevEvents) => sortEventsDescending(prevEvents.filter((event) => event.id !== id)));
      toast({
         title: "事件已删除",
         description: `事件 "${eventToDelete?.title}" 已从您的时间轴移除。`,
@@ -47,9 +64,10 @@ export default function Home() {
   // Function to handle the actual edit submission
   const handleEditEvent = (id: string, updatedData: Omit<TimelineEvent, 'id' | 'timestamp'>) => {
     setEvents((prevEvents) =>
-      prevEvents.map((event) =>
+       // Map to update the event and resort descending
+      sortEventsDescending(prevEvents.map((event) =>
         event.id === id ? { ...event, ...updatedData } : event
-      ).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()) // Keep sorted
+      ))
     );
      toast({
         title: "事件已更新",
@@ -60,10 +78,12 @@ export default function Home() {
     setEditingEvent(null);
   };
 
-   React.useEffect(() => {
-    // Initial sort when component mounts
-    setEvents(prevEvents => [...prevEvents].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
-  }, []);
+
+  // Render only on the client to avoid hydration issues with Date formatting
+  if (!isClient) {
+     // You could show a loading spinner or skeleton here
+    return null;
+  }
 
 
   return (
