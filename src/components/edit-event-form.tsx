@@ -5,8 +5,8 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck } from "lucide-react"; // Import icons
-// Removed next/image import
+import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags } from "lucide-react"; // Added Tags icon
+import { motion } from 'framer-motion'; // Import motion
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"; // Import Select components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip
 import type { TimelineEvent, EventType } from "@/types/event";
+import { cn } from "@/lib/utils";
 
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -96,11 +98,14 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    // Store initial values separately to manage preview states
    const [initialImageUrl, setInitialImageUrl] = React.useState<string | undefined>(undefined);
    const [initialAttachmentName, setInitialAttachmentName] = React.useState<string | undefined>(undefined);
-   // Removed image preview state: const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(null);
    const [attachmentName, setAttachmentName] = React.useState<string | null>(null);
    // Flags to track if the user wants to clear existing files
    const [clearExistingImage, setClearExistingImage] = React.useState(false);
    const [clearExistingAttachment, setClearExistingAttachment] = React.useState(false);
+   // State to control visibility of optional fields
+   const [showTypeSelect, setShowTypeSelect] = React.useState(false);
+   const [showImageUpload, setShowImageUpload] = React.useState(false);
+   const [showAttachmentUpload, setShowAttachmentUpload] = React.useState(false);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -115,33 +120,37 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     },
   });
 
-  // Removed imageFile watch: const imageFile = form.watch("image");
   const attachmentFile = form.watch("attachment");
+  const imageFile = form.watch("image");
 
-
- // Reset form and previews when the event prop changes or dialog opens/closes
+ // Reset form and manage visibility when the event prop changes or dialog opens/closes
  React.useEffect(() => {
     if (event && isOpen) {
         form.reset({
-            eventType: event.eventType, // Set initial event type
+            eventType: event.eventType,
             title: event.title,
             description: event.description ?? "",
-            image: undefined, // Reset file inputs
+            image: undefined, // Reset file inputs on open
             attachment: undefined,
         });
-        // Set initial values for preview/display
+        // Set initial values for display/clearing logic
         setInitialImageUrl(event.imageUrl);
         setInitialAttachmentName(event.attachment?.name);
-        // Initially, show existing attachment if present
-        setAttachmentName(event.attachment?.name ?? null);
+        setAttachmentName(event.attachment?.name ?? null); // Show current attachment name initially
+
+        // Decide initial visibility based on whether the event HAS these properties
+        setShowTypeSelect(true); // Always show type for editing initially? Or make it explicit? Let's make it explicit toggle.
+        setShowImageUpload(!!event.imageUrl); // Show if there IS an image
+        setShowAttachmentUpload(!!event.attachment); // Show if there IS an attachment
+
         // Reset clearing flags
         setClearExistingImage(false);
         setClearExistingAttachment(false);
 
     } else if (!isOpen) {
         // Reset everything when dialog closes
-        form.reset({
-            eventType: 'note', // Reset to default
+         form.reset({
+            eventType: 'note',
             title: "",
             description: "",
             image: undefined,
@@ -152,34 +161,35 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         setAttachmentName(null);
         setClearExistingImage(false);
         setClearExistingAttachment(false);
+        // Reset visibility toggles
+        setShowTypeSelect(false);
+        setShowImageUpload(false);
+        setShowAttachmentUpload(false);
     }
 }, [event, isOpen, form]);
 
 
-  // Removed image preview useEffect
 
-
-   // Update attachment name display based on selected file
+   // Update attachment name display based on selected file or initial state
    React.useEffect(() => {
-    if (attachmentFile && attachmentFile instanceof FileList && attachmentFile.length > 0) {
-        const file = attachmentFile[0];
-        if (file.size <= MAX_FILE_SIZE) {
-            setAttachmentName(file.name);
-            // If a new attachment is selected, don't clear the existing one on save
-            setClearExistingAttachment(false);
+        if (attachmentFile && attachmentFile instanceof FileList && attachmentFile.length > 0) {
+            const file = attachmentFile[0];
+            if (file.size <= MAX_FILE_SIZE) {
+                setAttachmentName(file.name);
+                setClearExistingAttachment(false); // New file overrides clear intent
+            } else {
+                // Invalid new file, revert to showing initial name if it exists
+                 setAttachmentName(initialAttachmentName ?? null);
+                 form.setValue("attachment", undefined); // Clear invalid file from form
+            }
+        } else if (!clearExistingAttachment) {
+            // No new file and not cleared, show the initial attachment name
+            setAttachmentName(initialAttachmentName ?? null);
         } else {
-             // If file is invalid, revert to initial or clear
-             setAttachmentName(initialAttachmentName ?? null);
+            // Explicitly cleared
+            setAttachmentName(null);
         }
-
-    } else if (!clearExistingAttachment) {
-         // If no file selected and not explicitly cleared, show initial attachment
-         setAttachmentName(initialAttachmentName ?? null);
-    } else {
-         // If cleared, show nothing
-         setAttachmentName(null);
-    }
-  }, [attachmentFile, initialAttachmentName, clearExistingAttachment]); // Depend on clear flag
+   }, [attachmentFile, initialAttachmentName, clearExistingAttachment, form]); // Added form dep
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -234,200 +244,281 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    const handleClearImage = () => {
         form.setValue("image", undefined); // Clear file input in form
         setClearExistingImage(true); // Mark existing image for removal on save
-        // Preview state removed
+        // Optional: Hide the input again?
+        // setShowImageUpload(false);
    };
 
     // Function to handle clearing the attachment (newly selected or existing)
    const handleClearAttachment = () => {
         form.setValue("attachment", undefined); // Clear file input in form
         setClearExistingAttachment(true); // Mark existing attachment for removal on save
-       // Name cleared by useEffect
+        // Name cleared by useEffect
+        // Optional: Hide the input again?
+        // setShowAttachmentUpload(false);
    };
 
   if (!event) return null; // Don't render the dialog if no event is selected
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[480px]"> {/* Increased width slightly */}
-        <DialogHeader>
-          <DialogTitle>编辑事件</DialogTitle> {/* Translate */}
-          <DialogDescription>
-            更新您的时间轴事件的详细信息。您可以更改类型、替换或清除现有的图片/附件。 {/* Translate */}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
+    <TooltipProvider>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-[480px]"> {/* Increased width slightly */}
+            <DialogHeader>
+            <DialogTitle>编辑事件</DialogTitle> {/* Translate */}
+            <DialogDescription>
+                 更新事件详情。点击下方图标编辑类型、图片或附件。 {/* Updated Description */}
+            </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
 
-             {/* Event Type Selection */}
-             <FormField
-              control={form.control}
-              name="eventType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>事件类型</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} /* Controlled component */ >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="选择事件类型..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                       <SelectItem value="note">
-                        <div className="flex items-center gap-2">
-                          <StickyNote className="h-4 w-4" /> 笔记
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="todo">
-                         <div className="flex items-center gap-2">
-                            <CheckSquare className="h-4 w-4" /> 待办
-                         </div>
-                      </SelectItem>
-                      <SelectItem value="schedule">
-                         <div className="flex items-center gap-2">
-                            <CalendarCheck className="h-4 w-4" /> 日程
-                         </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                {/* Title (Always Visible) */}
+                 <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem>
+                        {/* <FormLabel>标题</FormLabel> */}
+                        <FormControl>
+                            <Input
+                            placeholder="输入事件标题..."
+                            {...field}
+                             className="text-lg font-semibold"
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                {/* Description (Always Visible) */}
+                 <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                        <FormItem>
+                         {/* <FormLabel>描述 (可选)</FormLabel> */}
+                        <FormControl>
+                            <Textarea
+                            placeholder="添加描述 (可选)..."
+                            className="resize-none min-h-[100px]"
+                            {...field}
+                            value={field.value ?? ""}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
-            {/* Title */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>标题</FormLabel> {/* Translate */}
-                  <FormControl>
-                     <Input
-                      placeholder="例如：团队会议"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>描述 (可选)</FormLabel> {/* Translate */}
-                  <FormControl>
-                     <Textarea
-                      placeholder="例如：讨论项目进展..."
-                      className="resize-none"
-                      {...field}
-                      value={field.value ?? ""} // Ensure value is controlled
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                {/* --- Conditionally Rendered Fields --- */}
 
-            {/* Image Upload */}
-             <FormField
-              control={form.control}
-              name="image"
-              render={({ field: { onChange, onBlur, name, ref } }) => (
-                <FormItem>
-                   <FormLabel className="flex items-center gap-2">
-                     <ImageIcon className="h-4 w-4" /> 图片 (可选, 最多 5MB)
-                    </FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            type="file"
-                            accept={ALLOWED_IMAGE_TYPES.join(",")}
-                            onChange={(e) => onChange(e.target.files)}
-                            onBlur={onBlur}
-                            name={name}
-                            ref={ref}
-                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                        />
-                        {/* Clear Image Button */}
-                         {(form.getValues("image") || initialImageUrl) && ( // Show clear if new file OR initial image exists
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={handleClearImage} // Use specific clear handler
-                                aria-label="清除图片"
-                            >
-                                <XCircle className="h-4 w-4" />
-                            </Button>
-                         )}
-                    </div>
-                  </FormControl>
-                   <FormDescription>
-                     {initialImageUrl && !form.getValues("image") ? "当前图片: " + initialImageUrl.substring(0,30) + "..." : ""} {/* Show initial image info */}
-                    选择新图片将会替换现有图片。点击清除按钮移除图片。
-                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-             {/* Removed Image Preview Section */}
-
-            {/* Attachment Upload */}
-            <FormField
-              control={form.control}
-              name="attachment"
-              render={({ field: { onChange, onBlur, name, ref } }) => (
-                <FormItem>
-                   <FormLabel className="flex items-center gap-2">
-                      <Paperclip className="h-4 w-4" /> 附件 (可选, 最多 5MB)
-                   </FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-2">
-                      <Input
-                            type="file"
-                            onChange={(e) => onChange(e.target.files)}
-                            onBlur={onBlur}
-                            name={name}
-                            ref={ref}
-                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
-                        />
-                        {/* Clear Attachment Button */}
-                        {(form.getValues("attachment") || initialAttachmentName) && (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={handleClearAttachment} // Use specific clear handler
-                                aria-label="清除附件"
-                            >
-                                <XCircle className="h-4 w-4" />
-                            </Button>
+                {/* Event Type Selection */}
+                {showTypeSelect && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                        <FormField
+                        control={form.control}
+                        name="eventType"
+                        render={({ field }) => (
+                            <FormItem className="mt-4">
+                            <FormLabel>事件类型</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} /* Controlled component */ >
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="选择事件类型..." />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="note">
+                                    <div className="flex items-center gap-2">
+                                    <StickyNote className="h-4 w-4" /> 笔记
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="todo">
+                                    <div className="flex items-center gap-2">
+                                        <CheckSquare className="h-4 w-4" /> 待办
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="schedule">
+                                    <div className="flex items-center gap-2">
+                                        <CalendarCheck className="h-4 w-4" /> 日程
+                                    </div>
+                                </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
                         )}
-                    </div>
-                  </FormControl>
-                    <FormDescription>
-                     {initialAttachmentName && !form.getValues("attachment") ? "当前附件: " + initialAttachmentName : ""} {/* Show initial attachment name */}
-                     选择新附件将会替换现有附件。点击清除按钮移除附件。
-                    </FormDescription>
-                   <FormMessage />
-                </FormItem>
-              )}
-            />
+                        />
+                    </motion.div>
+                )}
 
-             <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button> {/* Translate */}
-                <Button type="submit">保存更改</Button> {/* Translate */}
-             </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+                {/* Image Upload */}
+                {showImageUpload && (
+                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                        <FormField
+                        control={form.control}
+                        name="image"
+                        render={({ field: { onChange, onBlur, name, ref } }) => (
+                            <FormItem className="mt-4">
+                            <FormLabel className="flex items-center gap-2">
+                                <ImageIcon className="h-4 w-4" /> {initialImageUrl ? "替换图片" : "上传图片"} (可选, 最多 5MB)
+                                </FormLabel>
+                            <FormControl>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="file"
+                                        accept={ALLOWED_IMAGE_TYPES.join(",")}
+                                        onChange={(e) => {
+                                             onChange(e.target.files);
+                                             setClearExistingImage(false); // Selecting new file cancels clear intent
+                                        }}
+                                        onBlur={onBlur}
+                                        name={name}
+                                        ref={ref}
+                                        className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                                    />
+                                    {/* Clear Image Button - Show if a NEW file is staged OR an initial image exists and isn't marked for clearing */}
+                                    {(form.getValues("image") || (initialImageUrl && !clearExistingImage)) && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                            onClick={handleClearImage}
+                                            aria-label="清除图片"
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </FormControl>
+                            <FormDescription>
+                                {initialImageUrl && !form.getValues("image") && !clearExistingImage ? `当前图片: ${initialImageUrl.substring(0,30)}...` : ""} {/* Show initial image info */}
+                                {initialImageUrl && clearExistingImage ? "当前图片将被移除。" : ""}
+                                {form.getValues("image") ? "已选择新图片。" : ""}
+                                {/* Choose a new image to replace the existing one. Click clear to remove it. */}
+                            </FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                     </motion.div>
+                 )}
+
+                {/* Attachment Upload */}
+                 {showAttachmentUpload && (
+                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                        <FormField
+                        control={form.control}
+                        name="attachment"
+                        render={({ field: { onChange, onBlur, name, ref } }) => (
+                            <FormItem className="mt-4">
+                            <FormLabel className="flex items-center gap-2">
+                                <Paperclip className="h-4 w-4" /> {initialAttachmentName ? "替换附件" : "添加附件"} (可选, 最多 5MB)
+                            </FormLabel>
+                            <FormControl>
+                                <div className="flex items-center gap-2">
+                                <Input
+                                        type="file"
+                                        onChange={(e) => {
+                                            onChange(e.target.files);
+                                            // setClearExistingAttachment(false); // Handled by useEffect now
+                                        }}
+                                        onBlur={onBlur}
+                                        name={name}
+                                        ref={ref}
+                                        className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
+                                    />
+                                    {/* Clear Attachment Button - Show if NEW file staged OR initial exists and not marked for clearing */}
+                                    {(form.getValues("attachment") || (initialAttachmentName && !clearExistingAttachment)) && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                            onClick={handleClearAttachment}
+                                            aria-label="清除附件"
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </FormControl>
+                             <FormDescription>
+                                {attachmentName && !form.getValues("attachment") && !clearExistingAttachment ? `当前附件: ${attachmentName}` : ""}
+                                {initialAttachmentName && clearExistingAttachment ? "当前附件将被移除。" : ""}
+                                {form.getValues("attachment") && attachmentName ? `已选择新附件: ${attachmentName}` : ""}
+                                {/* Choose a new attachment to replace the existing one. Click clear to remove it. */}
+                             </FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                     </motion.div>
+                 )}
+
+
+                {/* Action Icons & Footer */}
+                 <div className="flex items-center gap-2 pt-4 border-t mt-auto">
+                     <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowTypeSelect(!showTypeSelect)}
+                                className={cn("text-muted-foreground", showTypeSelect && "bg-accent text-accent-foreground")}
+                                aria-label="编辑事件类型"
+                            >
+                                <Tags className="h-5 w-5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>编辑事件类型</p>
+                        </TooltipContent>
+                    </Tooltip>
+                     <Tooltip>
+                        <TooltipTrigger asChild>
+                             <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowImageUpload(!showImageUpload)}
+                                className={cn("text-muted-foreground", showImageUpload && "bg-accent text-accent-foreground")}
+                                aria-label={initialImageUrl ? "编辑图片" : "添加图片"}
+                            >
+                                <ImageIcon className="h-5 w-5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                             <p>{initialImageUrl ? "编辑图片" : "添加图片"}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                             <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowAttachmentUpload(!showAttachmentUpload)}
+                                className={cn("text-muted-foreground", showAttachmentUpload && "bg-accent text-accent-foreground")}
+                                aria-label={initialAttachmentName ? "编辑附件" : "添加附件"}
+                            >
+                                <Paperclip className="h-5 w-5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                             <p>{initialAttachmentName ? "编辑附件" : "添加附件"}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                     <div className="flex-grow"></div> {/* Spacer */}
+                    <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button>
+                    <Button type="submit">保存更改</Button>
+                 </div>
+            </form>
+            </Form>
+        </DialogContent>
+        </Dialog>
+    </TooltipProvider>
   );
 }
-
