@@ -31,6 +31,10 @@ interface TimelineProps {
 export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) {
   // Events are now sorted by the parent component (page.tsx) in descending order
 
+  // State to manage which event is pending deletion for confirmation
+  const [eventToDelete, setEventToDelete] = React.useState<TimelineEvent | null>(null);
+
+
   return (
     <div className="relative w-full max-w-3xl mx-auto px-4 py-8">
       {/* Central Timeline Line with Gradient */}
@@ -71,8 +75,8 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                      <div className="flex-1 min-w-0"> {/* Ensure title/desc take space */}
                        <CardTitle className="text-lg font-semibold">{event.title}</CardTitle>
                        <CardDescription className="text-sm text-muted-foreground pt-1">
-                         {/* Format date using Chinese locale */}
-                         {format(event.timestamp, 'PPP p', { locale: zhCN })}
+                         {/* Format date using Chinese locale and 24-hour format */}
+                         {format(event.timestamp, 'PPP HH:mm', { locale: zhCN })}
                        </CardDescription>
                      </div>
                      <div className={`flex space-x-1 ${index % 2 === 0 ? 'ml-2' : 'mr-2'} flex-shrink-0`}> {/* Actions */}
@@ -83,26 +87,38 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                        {/* Delete Button */}
                        <AlertDialog>
                          <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" aria-label="删除事件"> {/* Translate aria-label */}
+                           <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                             aria-label="删除事件" // Translate aria-label
+                             onClick={() => setEventToDelete(event)} // Set the event to delete on click
+                             >
                              <Trash2 className="h-4 w-4" />
                            </Button>
                          </AlertDialogTrigger>
-                         <AlertDialogContent>
-                           <AlertDialogHeader>
-                             <AlertDialogTitle>确定要删除吗？</AlertDialogTitle> {/* Translate */}
-                             <AlertDialogDescription>
-                               此操作无法撤销。这将永久删除标题为 "{event.title}" 的事件。 {/* Translate */}
-                             </AlertDialogDescription>
-                           </AlertDialogHeader>
-                           <AlertDialogFooter>
-                             <AlertDialogCancel>取消</AlertDialogCancel> {/* Translate */}
-                             <AlertDialogAction
-                               className="bg-destructive hover:bg-destructive/90"
-                               onClick={() => onDeleteEvent(event.id)}>
-                               删除 {/* Translate */}
-                             </AlertDialogAction>
-                           </AlertDialogFooter>
-                         </AlertDialogContent>
+                         {/* Conditionally render content based on selected event */}
+                         {eventToDelete?.id === event.id && (
+                             <AlertDialogContent>
+                             <AlertDialogHeader>
+                                 <AlertDialogTitle>确定要删除吗？</AlertDialogTitle> {/* Translate */}
+                                 <AlertDialogDescription>
+                                 此操作无法撤销。这将永久删除标题为 "{eventToDelete.title}" 的事件。 {/* Translate */}
+                                 </AlertDialogDescription>
+                             </AlertDialogHeader>
+                             <AlertDialogFooter>
+                                 <AlertDialogCancel onClick={() => setEventToDelete(null)}>取消</AlertDialogCancel> {/* Translate & clear state on cancel */}
+                                 <AlertDialogAction
+                                     className="bg-destructive hover:bg-destructive/90"
+                                     onClick={() => {
+                                         onDeleteEvent(eventToDelete.id);
+                                         setEventToDelete(null); // Clear state after deletion
+                                        }}>
+                                     删除 {/* Translate */}
+                                 </AlertDialogAction>
+                             </AlertDialogFooter>
+                             </AlertDialogContent>
+                         )}
                        </AlertDialog>
                      </div>
                    </div>
