@@ -5,7 +5,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Plus, Paperclip, Image as ImageIcon, XCircle } from "lucide-react";
+import { Plus, Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck } from "lucide-react"; // Import new icons
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +28,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { TimelineEvent } from "@/types/event";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"; // Import Select components
+import type { TimelineEvent, EventType } from "@/types/event";
 import Image from 'next/image'; // Import next/image
 
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
@@ -42,12 +49,15 @@ const ALLOWED_ATTACHMENT_TYPES = [ // Example allowed types, adjust as needed
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
 ];
 
+// Define allowed event types
+const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
 
 // Check if running in the browser environment
 const isBrowser = typeof window !== 'undefined';
 
 // Zod schema with Chinese validation messages and file inputs
 const formSchema = z.object({
+  eventType: z.enum(EVENT_TYPES, { required_error: "请选择事件类型。" }), // Add eventType validation
   title: z.string().min(1, { message: "标题不能为空。" }).max(100, { message: "标题不能超过100个字符。" }),
   description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(),
   image: z.any() // Use z.any() for FileList compatibility with SSR
@@ -97,6 +107,7 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      eventType: 'note', // Default event type
       title: "",
       description: "",
       image: undefined,
@@ -109,14 +120,12 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
 
   // Update image preview
   React.useEffect(() => {
+    let objectUrl: string | null = null; // Store object URL to revoke
     if (imageFile && imageFile instanceof FileList && imageFile.length > 0) {
       const file = imageFile[0];
       if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_FILE_SIZE) {
-         const reader = new FileReader();
-          reader.onloadend = () => {
-            setImagePreviewUrl(reader.result as string);
-          };
-          reader.readAsDataURL(file);
+        objectUrl = URL.createObjectURL(file);
+        setImagePreviewUrl(objectUrl);
       } else {
          // Clear preview if file is invalid after selection (though Zod should prevent submission)
          setImagePreviewUrl(null);
@@ -127,11 +136,12 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
     }
      // Cleanup function to revoke object URL
     return () => {
-        if (imagePreviewUrl && imagePreviewUrl.startsWith('blob:')) {
-             URL.revokeObjectURL(imagePreviewUrl);
+        if (objectUrl) {
+             URL.revokeObjectURL(objectUrl);
+             setImagePreviewUrl(null); // Clear state on cleanup as well
         }
     }
-  }, [imageFile, imagePreviewUrl]); // Rerun when imageFile changes
+  }, [imageFile]); // Rerun when imageFile changes
 
 
    // Update attachment name display
@@ -178,6 +188,7 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
     }
 
     onAddEvent({
+        eventType: values.eventType, // Pass event type
         title: values.title,
         description: values.description,
         imageUrl: imageUrl, // Pass the data URI or undefined
@@ -193,12 +204,12 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
 
   const clearImage = () => {
     form.setValue("image", undefined); // Clear react-hook-form state
-    setImagePreviewUrl(null); // Clear preview
+    // Preview cleared by useEffect
   };
 
   const clearAttachment = () => {
     form.setValue("attachment", undefined); // Clear react-hook-form state
-    setAttachmentName(null); // Clear displayed name
+     // Name cleared by useEffect
   };
 
 
@@ -222,11 +233,48 @@ export function AddEventForm({ onAddEvent }: AddEventFormProps) {
         <DialogHeader>
           <DialogTitle>添加新事件</DialogTitle> {/* Translate */}
           <DialogDescription>
-            填写新时间轴事件的详细信息，并可选择添加图片或附件。 {/* Translate */}
+            填写新时间轴事件的详细信息，选择类型，并可选择添加图片或附件。 {/* Translate */}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
+
+             {/* Event Type Selection */}
+             <FormField
+              control={form.control}
+              name="eventType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>事件类型</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择事件类型..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="note">
+                        <div className="flex items-center gap-2">
+                          <StickyNote className="h-4 w-4" /> 笔记
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="todo">
+                         <div className="flex items-center gap-2">
+                            <CheckSquare className="h-4 w-4" /> 待办
+                         </div>
+                      </SelectItem>
+                      <SelectItem value="schedule">
+                         <div className="flex items-center gap-2">
+                            <CalendarCheck className="h-4 w-4" /> 日程
+                         </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Title */}
             <FormField
               control={form.control}

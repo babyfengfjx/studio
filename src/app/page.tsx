@@ -39,7 +39,7 @@ export default function Home() {
     setEvents((prevEvents) => sortEventsDescending([...prevEvents, newEvent]));
     toast({
         title: "事件已添加",
-        description: `事件 "${newEvent.title}" 已添加到您的时间轴。`,
+        description: `类型为 "${getEventTypeLabel(newEvent.eventType)}" 的事件 "${newEvent.title}" 已添加到您的时间轴。`, // Include type in toast
       });
   };
 
@@ -49,7 +49,7 @@ export default function Home() {
     setEvents((prevEvents) => sortEventsDescending(prevEvents.filter((event) => event.id !== id)));
      toast({
         title: "事件已删除",
-        description: `事件 "${eventToDelete?.title}" 已从您的时间轴移除。`,
+        description: `类型为 "${getEventTypeLabel(eventToDelete?.eventType)}" 的事件 "${eventToDelete?.title}" 已从您的时间轴移除。`, // Include type in toast
         variant: "destructive",
       });
   };
@@ -63,6 +63,7 @@ export default function Home() {
   // Function to handle the actual edit submission
   // Accepts Partial update data
   const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
+     const originalEvent = events.find(e => e.id === id);
     setEvents((prevEvents) =>
       sortEventsDescending(prevEvents.map((event) =>
         event.id === id ? { ...event, ...updatedData } : event // Merge partial updates
@@ -70,7 +71,7 @@ export default function Home() {
     );
      toast({
         title: "事件已更新",
-        description: `事件 "${updatedData.title ?? events.find(e => e.id === id)?.title}" 已更新。`, // Use existing title if not updated
+        description: `类型为 "${getEventTypeLabel(updatedData.eventType ?? originalEvent?.eventType)}" 的事件 "${updatedData.title ?? originalEvent?.title}" 已更新。`, // Include type and use existing title if not updated
       });
     // Close the dialog after successful edit
     setIsEditDialogOpen(false);
@@ -82,8 +83,8 @@ export default function Home() {
   if (!isClient) {
      // You could show a loading spinner or skeleton here
      return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950">
-          <p>加载中...</p> {/* Basic loading indicator */}
+        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4"> {/* Added padding */}
+          <p className="text-foreground">加载中...</p> {/* Basic loading indicator */}
         </main>
       );
   }
@@ -91,7 +92,7 @@ export default function Home() {
 
   return (
     // Apply gradient background
-    <main className="flex min-h-screen flex-col items-center justify-between py-12 bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950">
+    <main className="flex min-h-screen flex-col items-center justify-between py-12 bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4"> {/* Added padding */}
       <div className="container mx-auto px-4">
         <h1 className="text-4xl font-bold text-center mb-10 text-foreground">时光流</h1> {/* Title in Chinese */}
         <Timeline
@@ -112,3 +113,15 @@ export default function Home() {
     </main>
   );
 }
+
+
+// Helper function to get Chinese label for event type (can be moved to a utils file)
+const getEventTypeLabel = (eventType?: TimelineEvent['eventType']): string => {
+  if (!eventType) return '事件'; // Fallback
+  switch (eventType) {
+    case 'note': return '笔记';
+    case 'todo': return '待办';
+    case 'schedule': return '日程';
+    default: return '事件';
+  }
+};

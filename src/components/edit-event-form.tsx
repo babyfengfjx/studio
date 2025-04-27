@@ -5,7 +5,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Paperclip, Image as ImageIcon, XCircle } from "lucide-react"; // Import icons
+import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck } from "lucide-react"; // Import icons
 import Image from 'next/image'; // Import next/image
 
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { TimelineEvent } from "@/types/event";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"; // Import Select components
+import type { TimelineEvent, EventType } from "@/types/event";
 
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -36,12 +43,16 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 // Add other allowed types if needed
 // const ALLOWED_ATTACHMENT_TYPES = [ ... ];
 
+// Define allowed event types
+const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
+
 
 // Check if running in the browser environment
 const isBrowser = typeof window !== 'undefined';
 
 // Zod schema with Chinese validation messages and file inputs
 const formSchema = z.object({
+  eventType: z.enum(EVENT_TYPES, { required_error: "请选择事件类型。" }), // Add eventType validation
   title: z.string().min(1, { message: "标题不能为空。" }).max(100, { message: "标题不能超过100个字符。" }),
   description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(),
   image: z.any() // Use z.any() for FileList compatibility with SSR
@@ -96,6 +107,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     resolver: zodResolver(formSchema),
     // Default values will be set in useEffect
     defaultValues: {
+      eventType: 'note', // Default, will be overridden
       title: "",
       description: "",
       image: undefined,
@@ -111,6 +123,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
  React.useEffect(() => {
     if (event && isOpen) {
         form.reset({
+            eventType: event.eventType, // Set initial event type
             title: event.title,
             description: event.description ?? "",
             image: undefined, // Reset file inputs
@@ -129,6 +142,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     } else if (!isOpen) {
         // Reset everything when dialog closes
         form.reset({
+            eventType: 'note', // Reset to default
             title: "",
             description: "",
             image: undefined,
@@ -146,16 +160,14 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   // Update image preview based on selected file
   React.useEffect(() => {
+     let objectUrl: string | null = null; // Store object URL to revoke
     if (imageFile && imageFile instanceof FileList && imageFile.length > 0) {
       const file = imageFile[0];
        if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_FILE_SIZE) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreviewUrl(reader.result as string);
-                 // If a new image is selected, don't clear the existing one on save
-                 setClearExistingImage(false);
-            };
-            reader.readAsDataURL(file);
+            objectUrl = URL.createObjectURL(file);
+            setImagePreviewUrl(objectUrl);
+            // If a new image is selected, don't clear the existing one on save
+            setClearExistingImage(false);
        } else {
            // If file is invalid, revert to initial or clear
            setImagePreviewUrl(initialImageUrl ?? null);
@@ -170,11 +182,12 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
      // Cleanup function to revoke object URL
     return () => {
-        if (imagePreviewUrl && imagePreviewUrl.startsWith('blob:')) {
-             URL.revokeObjectURL(imagePreviewUrl);
+        if (objectUrl) {
+             URL.revokeObjectURL(objectUrl);
+             setImagePreviewUrl(null); // Clear state on cleanup as well
         }
     }
-  }, [imageFile, initialImageUrl, clearExistingImage, imagePreviewUrl]); // Depend on clear flag and preview URL for cleanup
+  }, [imageFile, initialImageUrl, clearExistingImage]); // Depend on clear flag
 
 
    // Update attachment name display based on selected file
@@ -204,6 +217,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     if (!event) return;
 
     const updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>> = {
+        eventType: values.eventType, // Include event type in update
         title: values.title,
         description: values.description,
     };
@@ -249,14 +263,14 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    const handleClearImage = () => {
         form.setValue("image", undefined); // Clear file input in form
         setClearExistingImage(true); // Mark existing image for removal on save
-        setImagePreviewUrl(null); // Clear preview immediately
+        // Preview cleared by useEffect
    };
 
     // Function to handle clearing the attachment (newly selected or existing)
    const handleClearAttachment = () => {
         form.setValue("attachment", undefined); // Clear file input in form
         setClearExistingAttachment(true); // Mark existing attachment for removal on save
-        setAttachmentName(null); // Clear display name immediately
+       // Name cleared by useEffect
    };
 
   if (!event) return null; // Don't render the dialog if no event is selected
@@ -267,11 +281,48 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         <DialogHeader>
           <DialogTitle>编辑事件</DialogTitle> {/* Translate */}
           <DialogDescription>
-            更新您的时间轴事件的详细信息。您可以替换或清除现有的图片/附件。 {/* Translate */}
+            更新您的时间轴事件的详细信息。您可以更改类型、替换或清除现有的图片/附件。 {/* Translate */}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
+
+             {/* Event Type Selection */}
+             <FormField
+              control={form.control}
+              name="eventType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>事件类型</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} /* Controlled component */ >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择事件类型..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                       <SelectItem value="note">
+                        <div className="flex items-center gap-2">
+                          <StickyNote className="h-4 w-4" /> 笔记
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="todo">
+                         <div className="flex items-center gap-2">
+                            <CheckSquare className="h-4 w-4" /> 待办
+                         </div>
+                      </SelectItem>
+                      <SelectItem value="schedule">
+                         <div className="flex items-center gap-2">
+                            <CalendarCheck className="h-4 w-4" /> 日程
+                         </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Title */}
             <FormField
               control={form.control}

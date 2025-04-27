@@ -1,6 +1,9 @@
+export type EventType = 'note' | 'todo' | 'schedule';
+
 export interface TimelineEvent {
   id: string;
   timestamp: Date;
+  eventType: EventType; // Added field for event type
   title: string;
   description?: string;
   imageUrl?: string; // Optional URL for an image (can be data URI for local preview)
