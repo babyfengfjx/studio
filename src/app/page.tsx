@@ -4,7 +4,6 @@
 import * as React from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
-// Removed AddEventForm import
 import { Timeline } from '@/components/timeline';
 import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar'; // Import SearchBar
@@ -126,17 +125,15 @@ export default function Home() {
 
   return (
     // Apply gradient background
-    <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative"> {/* Add relative positioning */}
-      <div className="container mx-auto px-4 w-full max-w-4xl"> {/* Limit width for better layout */}
+    <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
+      {/* Main Content Area */}
+      {/* Added pb-[200px] for padding below fixed form */}
+      <div className="container mx-auto px-4 w-full max-w-4xl pb-[200px]">
         <h1 className="text-4xl font-bold text-center mb-6 text-foreground">时光流</h1> {/* Title in Chinese */}
 
-        {/* Quick Add Event Form */}
-        <div className="mb-8">
-          <QuickAddEventForm onAddEvent={handleAddEvent} />
-        </div>
-
         {/* Search and Filter Section */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8 sticky top-4 z-30 bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow"> {/* Added sticky positioning */}
+        {/* Added sticky positioning */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 sticky top-4 z-30 bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow">
           <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
           <FilterControls
              selectedType={selectedEventType}
@@ -154,7 +151,14 @@ export default function Home() {
         </div>
 
       </div>
-      {/* Removed the floating AddEventForm DialogTrigger */}
+
+       {/* Quick Add Event Form - Fixed at the bottom */}
+       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/90 backdrop-blur-md border-t border-border shadow-lg">
+         <div className="container mx-auto max-w-4xl"> {/* Match content width */}
+           <QuickAddEventForm onAddEvent={handleAddEvent} />
+         </div>
+       </div>
+
        {/* Edit Event Dialog */}
        <EditEventForm
         event={editingEvent}

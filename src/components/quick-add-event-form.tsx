@@ -20,6 +20,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { TimelineEvent, EventType } from "@/types/event";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { Separator } from "@/components/ui/separator"; // Import Separator
+
 
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -102,10 +104,10 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
         return; // Prevent submission if input is empty
     }
 
-    // Basic logic to split title and description (optional title)
+    // Split title (first line) and description (rest)
     const lines = trimmedValue.split('\n');
     const title = lines[0]; // Use the first line as title
-    const description = lines.length > 1 ? lines.slice(1).join('\n') : undefined;
+    const description = lines.length > 1 ? lines.slice(1).join('\n').trim() : undefined; // Use trim() for description
 
     let imageUrl: string | undefined = undefined;
     let attachmentData: TimelineEvent['attachment'] | undefined = undefined;
@@ -141,59 +143,81 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
 
   return (
     <TooltipProvider>
-      <Card className="shadow-lg overflow-hidden">
+      {/* Use Card for better structure and styling in fixed position */}
+      <Card className="shadow-md overflow-hidden border-0 rounded-lg">
         <form onSubmit={handleSubmit}>
-          <CardContent className="p-4 space-y-3">
+          <CardContent className="p-3 space-y-2"> {/* Reduced padding slightly */}
+            {/* Input field simulating Title/Content separation */}
             <Textarea
-              placeholder="记录您的想法、任务或日程...（第一行作为标题）"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base min-h-[80px]" // Make textarea look seamless
+              placeholder="输入标题 (可选)" // Placeholder for Title
+              value={inputValue.split('\n')[0]} // Only show first line
+              onChange={(e) => {
+                const currentLines = inputValue.split('\n');
+                currentLines[0] = e.target.value;
+                setInputValue(currentLines.join('\n'));
+              }}
+              rows={1} // Single row for title-like appearance
+              className="w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base font-medium p-1 placeholder-muted-foreground/70" // Styling for title
+            />
+            <Separator className="my-1" /> {/* Separator line */}
+             <Textarea
+              placeholder="记录您的想法、任务或日程..." // Placeholder for Content
+              value={inputValue.split('\n').slice(1).join('\n')} // Show lines after the first
+              onChange={(e) => {
+                const currentLines = inputValue.split('\n');
+                 // Keep the first line (title) and update the rest
+                setInputValue([currentLines[0], e.target.value].join('\n'));
+              }}
+              className="w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base min-h-[60px] p-1 placeholder-muted-foreground/70" // Adjusted min-height and padding
             />
 
-            {/* Image Preview */}
-            {imagePreviewUrl && (
-              <div className="relative w-24 h-24 rounded-md overflow-hidden border">
-                <Image src={imagePreviewUrl} alt="图片预览" layout="fill" objectFit="cover" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white hover:bg-black/70 rounded-full"
-                  onClick={clearImage}
-                  aria-label="清除图片"
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
 
-            {/* Attachment Name Display */}
-            {attachmentName && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary p-2 rounded-md">
-                <Paperclip className="h-4 w-4 flex-shrink-0" />
-                <span className="flex-1 truncate font-medium text-foreground">{attachmentName}</span>
-                <Button
+            {/* Previews and Attachment Name */}
+            <div className="flex items-center gap-2 flex-wrap">
+                 {/* Image Preview */}
+                {imagePreviewUrl && (
+                <div className="relative w-16 h-16 rounded-md overflow-hidden border flex-shrink-0"> {/* Smaller preview */}
+                    <Image src={imagePreviewUrl} alt="图片预览" layout="fill" objectFit="cover" />
+                    <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0"
-                    onClick={clearAttachment}
-                    aria-label="清除附件"
-                  >
-                    <XCircle className="h-4 w-4" />
-                  </Button>
-              </div>
-            )}
+                    className="absolute top-0 right-0 h-5 w-5 bg-black/50 text-white hover:bg-black/70 rounded-full p-0.5"
+                    onClick={clearImage}
+                    aria-label="清除图片"
+                    >
+                    <XCircle className="h-3 w-3" />
+                    </Button>
+                </div>
+                )}
+
+                {/* Attachment Name Display */}
+                {attachmentName && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary p-1.5 rounded-md max-w-[calc(100%-5rem)]"> {/* Limit width */}
+                    <Paperclip className="h-3 w-3 flex-shrink-0" />
+                    <span className="flex-1 truncate font-medium text-foreground">{attachmentName}</span>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 text-muted-foreground hover:text-destructive flex-shrink-0 p-0.5"
+                        onClick={clearAttachment}
+                        aria-label="清除附件"
+                    >
+                        <XCircle className="h-3 w-3" />
+                    </Button>
+                </div>
+                )}
+            </div>
           </CardContent>
 
-          <CardFooter className="bg-muted/50 p-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
+          <CardFooter className="bg-muted/50 p-2 flex items-center justify-between gap-1">
+            <div className="flex items-center gap-0.5"> {/* Reduced gap */}
                {/* Event Type Select */}
                 <Select value={eventType} onValueChange={(value) => setEventType(value as EventType)}>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <SelectTrigger className="w-auto h-8 px-2 border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectTrigger className="w-auto h-7 px-1.5 border-0 bg-transparent shadow-none focus:ring-0"> {/* Smaller trigger */}
                                 <SelectValue>
                                 {eventType === 'note' && <StickyNote className="h-4 w-4" />}
                                 {eventType === 'todo' && <CheckSquare className="h-4 w-4" />}
@@ -231,11 +255,11 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7" // Smaller button
                     onClick={() => imageInputRef.current?.click()}
                     aria-label="添加图片"
                   >
-                    <ImageIcon className="h-5 w-5" />
+                    <ImageIcon className="h-4 w-4" /> {/* Smaller icon */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -250,11 +274,11 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7" // Smaller button
                     onClick={() => attachmentInputRef.current?.click()}
                     aria-label="添加附件"
                   >
-                    <Paperclip className="h-5 w-5" />
+                    <Paperclip className="h-4 w-4" /> {/* Smaller icon */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -264,7 +288,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" size="sm" className="h-8">
+            <Button type="submit" size="sm" className="h-7 px-3"> {/* Smaller button */}
               <Send className="h-4 w-4 mr-1" /> 添加
             </Button>
 
@@ -289,3 +313,4 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     </TooltipProvider>
   );
 }
+
