@@ -16,7 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN"> {/* Set language to Chinese */}
+    // Set language to Chinese
+    <html lang="zh-CN">
       {/* Apply the font variable to the body */}
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
