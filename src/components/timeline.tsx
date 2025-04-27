@@ -68,9 +68,11 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
   return (
      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}> {/* Wrap the entire list for Dialog context */}
         <TooltipProvider> {/* Wrap with TooltipProvider */}
-            <div className="relative w-full max-w-4xl mx-auto px-4 py-8"> {/* Increased max-width */}
+            {/* Adjusted bottom padding */}
+            <div className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12"> {/* Increased bottom padding for search bar */}
                 {/* Central Timeline Line with Gradient */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 via-teal-400 to-purple-400 -translate-x-1/2 rounded-full"></div>
+                {/* Adjusted height to end slightly above the bottom */}
+                <div className="absolute left-1/2 top-0 bottom-6 w-1 bg-gradient-to-b from-blue-400 via-teal-400 to-purple-400 -translate-x-1/2 rounded-full"></div>
 
                 <AnimatePresence initial={false}>
                     {events.map((event, index) => {

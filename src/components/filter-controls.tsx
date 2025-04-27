@@ -39,7 +39,10 @@ export function FilterControls({ selectedType, onTypeChange, className, ...props
       <Select value={selectedType} onValueChange={onTypeChange}>
         <SelectTrigger
           id="event-type-filter"
-          className="h-8 w-auto px-2 py-1 text-xs border-0 bg-transparent shadow-none focus:ring-0" // Smaller height, padding, text size, less visual clutter
+          className={cn(
+              "h-8 w-auto px-2 py-1 text-xs border-0 shadow-none focus:ring-0", // Smaller height, padding, text size, less visual clutter
+              "bg-transparent text-foreground/80 hover:text-foreground" // Transparent background, adjusted text color
+          )}
           aria-label="筛选事件类型" // Aria label for the trigger itself
         >
           <ListFilter className="h-3 w-3 mr-1" /> {/* Smaller icon */}

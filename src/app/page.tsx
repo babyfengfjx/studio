@@ -14,6 +14,7 @@ import { QuickAddEventForm } from '@/components/quick-add-event-form';
 import { mockEvents } from '@/data/mock-events';
 import type { TimelineEvent, EventType } from '@/types/event';
 import { Button } from '@/components/ui/button'; // Import Button
+import { cn } from '@/lib/utils'; // Import cn utility
 
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
@@ -31,7 +32,7 @@ const getEventTypeLabel = (eventType?: EventType): string => {
   }
 };
 
-// Function to derive title from description (e.g., first line or first 30 chars)
+// Function to derive title from description (e.g., first line or first 50 chars)
 const deriveTitle = (description?: string): string => {
     if (!description) return '新事件'; // Default title if no description
     const lines = description.split('\n');
@@ -155,64 +156,13 @@ export default function Home() {
   return (
     // Apply gradient background
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
-      {/* Main Content Area - Reduced bottom padding */}
-      <div className="container mx-auto px-4 w-full max-w-4xl pb-[150px]"> {/* Adjusted padding */}
+      {/* Main Content Area - Reduced bottom padding to accommodate fixed form & search */}
+      <div className="container mx-auto px-4 w-full max-w-4xl pb-[220px]"> {/* Increased bottom padding */}
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
 
-         {/* Search Trigger / Expanded Search Bar Area */}
-        <div className="mb-6 flex justify-center relative h-10 items-center">
-          <AnimatePresence mode="wait">
-            {isSearchExpanded ? (
-              <motion.div
-                key="search-bar"
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="flex items-center gap-2 p-2 rounded-lg bg-background/80 backdrop-blur-sm shadow-md border border-border w-full max-w-md"
-              >
-                <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
-                <FilterControls
-                  selectedType={selectedEventType}
-                  onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
-                  className="w-auto flex-shrink-0" // Adjust styling for inline display
-                />
-                 <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 flex-shrink-0"
-                    onClick={() => setIsSearchExpanded(false)}
-                    aria-label="关闭搜索"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="search-trigger"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full bg-background/70 hover:bg-accent backdrop-blur-sm shadow border border-border"
-                  onClick={() => setIsSearchExpanded(true)}
-                  aria-label="打开搜索与筛选"
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-
-        {/* Timeline Section */}
-        <div className="mt-0"> {/* Removed margin top */}
+        {/* Timeline Section - No top margin, adjusted bottom padding handled by parent */}
+        <div className="mt-0">
              <Timeline
               events={filteredEvents} // Pass filtered events
               onEditEvent={handleOpenEditDialog} // Pass handler to open edit dialog
@@ -221,6 +171,71 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* Search Trigger / Expanded Search Bar Area - Positioned above the quick add form */}
+       <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16">
+         {/* Timeline Connector Line (Visible when search is NOT expanded) */}
+         {!isSearchExpanded && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-6 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full"></div>
+         )}
+         <AnimatePresence mode="wait">
+           {isSearchExpanded ? (
+             <motion.div
+               key="search-bar"
+               initial={{ opacity: 0, y: 10, scale: 0.95 }}
+               animate={{ opacity: 1, y: 0, scale: 1 }}
+               exit={{ opacity: 0, y: 10, scale: 0.95 }}
+               transition={{ duration: 0.2, ease: 'easeInOut' }}
+               className={cn(
+                   "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md",
+                   // Apply gradient background to expanded search bar
+                   "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
+                )}
+             >
+               <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
+               <FilterControls
+                 selectedType={selectedEventType}
+                 onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
+                 className="w-auto flex-shrink-0" // Adjust styling for inline display
+               />
+                <Button
+                   variant="ghost"
+                   size="icon"
+                   className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
+                   onClick={() => setIsSearchExpanded(false)}
+                   aria-label="关闭搜索"
+                 >
+                   <X className="h-4 w-4" />
+                 </Button>
+             </motion.div>
+           ) : (
+             <motion.div
+               key="search-trigger"
+               initial={{ opacity: 0, scale: 0.8 }}
+               animate={{ opacity: 1, scale: 1 }}
+               exit={{ opacity: 0, scale: 0.8 }}
+               transition={{ duration: 0.15, ease: 'easeOut' }}
+               className="relative" // Needed for absolute connector positioning
+             >
+
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className={cn(
+                     "rounded-full backdrop-blur-sm shadow border border-border",
+                     // Apply gradient background to search trigger button
+                     "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white" // Gradient background and text color
+                    )}
+                 onClick={() => setIsSearchExpanded(true)}
+                 aria-label="打开搜索与筛选"
+               >
+                 <Search className="h-5 w-5" />
+               </Button>
+             </motion.div>
+           )}
+         </AnimatePresence>
+       </div>
+
 
        {/* Quick Add Event Form - Fixed at the bottom */}
        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/90 backdrop-blur-md border-t border-border shadow-lg">
