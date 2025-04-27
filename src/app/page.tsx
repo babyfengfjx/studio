@@ -2,15 +2,24 @@
 'use client';
 
 import * as React from 'react';
+import { Search } from 'lucide-react'; // Import Search icon for trigger button
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { Timeline } from '@/components/timeline';
 import { EditEventForm } from '@/components/edit-event-form';
-import { SearchBar } from '@/components/search-bar'; // Import SearchBar
-import { FilterControls } from '@/components/filter-controls'; // Import FilterControls
-import { QuickAddEventForm } from '@/components/quick-add-event-form'; // Import QuickAddEventForm
+import { SearchBar } from '@/components/search-bar';
+import { FilterControls } from '@/components/filter-controls';
+import { QuickAddEventForm } from '@/components/quick-add-event-form';
 import { mockEvents } from '@/data/mock-events';
 import type { TimelineEvent, EventType } from '@/types/event';
+import { Button } from '@/components/ui/button'; // Import Button
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"; // Import Dialog components
 
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
@@ -28,6 +37,20 @@ const getEventTypeLabel = (eventType?: EventType): string => {
   }
 };
 
+// Function to derive title from description (e.g., first line or first 30 chars)
+const deriveTitle = (description?: string): string => {
+    if (!description) return '新事件'; // Default title if no description
+    const lines = description.split('\n');
+    const firstLine = lines[0].trim();
+    if (firstLine) {
+        return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine; // Use first line or truncate
+    }
+    // If first line is empty but there's more content, use a snippet
+    const snippet = description.trim().substring(0, 50);
+    return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
+};
+
+
 export default function Home() {
   const [allEvents, setAllEvents] = React.useState<TimelineEvent[]>([]); // Store all events
   const [editingEvent, setEditingEvent] = React.useState<TimelineEvent | null>(null);
@@ -35,6 +58,7 @@ export default function Home() {
   const [isClient, setIsClient] = React.useState(false); // State to track client-side rendering
   const [searchTerm, setSearchTerm] = React.useState(''); // State for search term
   const [selectedEventType, setSelectedEventType] = React.useState<EventType | 'all'>('all'); // State for filter
+  const [isSearchFilterOpen, setIsSearchFilterOpen] = React.useState(false); // State for search/filter dialog
   const { toast } = useToast();
 
    // Set isClient to true only on the client side and load initial data
@@ -44,13 +68,14 @@ export default function Home() {
   }, []);
 
 
-  // Updated handleAddEvent to match QuickAddEventForm output
-  const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'description'> & { description?: string }) => {
+  // Updated handleAddEvent: Title is derived from description
+  const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
+     const derivedTitle = deriveTitle(newEventData.description);
     const newEvent: TimelineEvent = {
       id: crypto.randomUUID(), // Generate a unique ID
       timestamp: new Date(), // Set timestamp to current time
-      title: newEventData.title, // Title is now mandatory from QuickAddForm
-      description: newEventData.description, // Description is optional
+      title: derivedTitle, // Derive title from description
+      description: newEventData.description, // Full description
       eventType: newEventData.eventType,
       imageUrl: newEventData.imageUrl,
       attachment: newEventData.attachment,
@@ -84,14 +109,24 @@ export default function Home() {
   // Accepts Partial update data
   const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
      const originalEvent = allEvents.find(e => e.id === id);
+     // If description is updated, also update the title
+     const finalUpdatedData = { ...updatedData };
+     if (updatedData.description !== undefined) {
+         finalUpdatedData.title = deriveTitle(updatedData.description);
+     } else if (updatedData.title === undefined && originalEvent) {
+         // Ensure title is updated if description changes, even if title wasn't explicitly passed
+         finalUpdatedData.title = deriveTitle(originalEvent.description);
+     }
+
+
     setAllEvents((prevEvents) =>
       sortEventsDescending(prevEvents.map((event) =>
-        event.id === id ? { ...event, ...updatedData } : event // Merge partial updates
+        event.id === id ? { ...event, ...finalUpdatedData } : event // Merge partial updates
       ))
     );
      toast({
         title: "事件已更新",
-        description: `类型为 "${getEventTypeLabel(updatedData.eventType ?? originalEvent?.eventType)}" 的事件 "${updatedData.title ?? originalEvent?.title}" 已更新。`, // Include type and use existing title if not updated
+        description: `类型为 "${getEventTypeLabel(finalUpdatedData.eventType ?? originalEvent?.eventType)}" 的事件 "${finalUpdatedData.title ?? originalEvent?.title}" 已更新。`, // Include type and use existing title if not updated
       });
     // Close the dialog after successful edit
     setIsEditDialogOpen(false);
@@ -127,22 +162,14 @@ export default function Home() {
     // Apply gradient background
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
       {/* Main Content Area */}
-      {/* Added pb-[200px] for padding below fixed form */}
-      <div className="container mx-auto px-4 w-full max-w-4xl pb-[200px]">
-        <h1 className="text-4xl font-bold text-center mb-6 text-foreground">时光流</h1> {/* Title in Chinese */}
+      {/* Increased pb-[220px] to accommodate search button next to form */}
+      <div className="container mx-auto px-4 w-full max-w-4xl pb-[220px]">
+        <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
-        {/* Search and Filter Section */}
-        {/* Added sticky positioning */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8 sticky top-4 z-30 bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow">
-          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-          <FilterControls
-             selectedType={selectedEventType}
-             onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
-             />
-        </div>
+        {/* REMOVED Sticky Search and Filter Section */}
 
         {/* Timeline Section */}
-        <div className="mt-8"> {/* Add margin top to push timeline below sticky controls */}
+        <div className="mt-0"> {/* Removed margin top as sticky header is gone */}
              <Timeline
               events={filteredEvents} // Pass filtered events
               onEditEvent={handleOpenEditDialog} // Pass handler to open edit dialog
@@ -152,10 +179,35 @@ export default function Home() {
 
       </div>
 
-       {/* Quick Add Event Form - Fixed at the bottom */}
+       {/* Quick Add Event Form & Search Trigger - Fixed at the bottom */}
        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/90 backdrop-blur-md border-t border-border shadow-lg">
-         <div className="container mx-auto max-w-4xl"> {/* Match content width */}
-           <QuickAddEventForm onAddEvent={handleAddEvent} />
+         <div className="container mx-auto max-w-4xl flex items-end gap-2"> {/* Use flex to align items */}
+           {/* Quick Add Form takes most space */}
+           <div className="flex-grow">
+             <QuickAddEventForm onAddEvent={handleAddEvent} />
+           </div>
+           {/* Search/Filter Trigger Button */}
+           <Dialog open={isSearchFilterOpen} onOpenChange={setIsSearchFilterOpen}>
+             <DialogTrigger asChild>
+               <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0 mb-[3px]"> {/* Match height roughly */}
+                 <Search className="h-5 w-5" />
+                 <span className="sr-only">搜索与筛选</span>
+               </Button>
+             </DialogTrigger>
+             <DialogContent className="sm:max-w-[425px]">
+               <DialogHeader>
+                 <DialogTitle>搜索与筛选</DialogTitle>
+               </DialogHeader>
+               <div className="grid gap-4 py-4">
+                  <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+                  <FilterControls
+                    selectedType={selectedEventType}
+                    onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
+                  />
+               </div>
+               {/* Optional: Add a footer button to close */}
+             </DialogContent>
+           </Dialog>
          </div>
        </div>
 

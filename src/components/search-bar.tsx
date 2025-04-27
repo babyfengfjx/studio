@@ -13,14 +13,15 @@ interface SearchBarProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function SearchBar({ searchTerm, onSearchChange, className, ...props }: SearchBarProps) {
   return (
-    <div className={cn("relative flex-grow", className)}>
+    // Removed flex-grow as it's likely within a dialog now
+    <div className={cn("relative", className)}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
         type="search"
-        placeholder="搜索事件标题或描述..." // Translate placeholder
+        placeholder="搜索事件..." // Shortened placeholder
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
-        className="pl-10 w-full" // Add padding for the icon
+        className="pl-10 w-full" // Ensure full width within its container
         {...props}
       />
     </div>

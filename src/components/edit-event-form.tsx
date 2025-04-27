@@ -5,8 +5,8 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags } from "lucide-react"; // Added Tags icon
-import { motion } from 'framer-motion'; // Import motion
+import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags } from "lucide-react";
+import { motion } from 'framer-motion';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,8 +34,8 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select"; // Import Select components
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip
+} from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { TimelineEvent, EventType } from "@/types/event";
 import { cn } from "@/lib/utils";
 
@@ -52,11 +52,24 @@ const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
 // Check if running in the browser environment
 const isBrowser = typeof window !== 'undefined';
 
+// Function to derive title from description (e.g., first line or first 30 chars)
+const deriveTitle = (description?: string): string => {
+    if (!description) return '新事件'; // Default title if no description
+    const lines = description.split('\n');
+    const firstLine = lines[0].trim();
+    if (firstLine) {
+        return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine; // Use first line or truncate
+    }
+    // If first line is empty but there's more content, use a snippet
+    const snippet = description.trim().substring(0, 50);
+    return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
+};
+
 // Zod schema with Chinese validation messages and file inputs
+// Title is removed from direct user input validation, will be derived
 const formSchema = z.object({
   eventType: z.enum(EVENT_TYPES, { required_error: "请选择事件类型。" }), // Add eventType validation
-  title: z.string().min(1, { message: "标题不能为空。" }).max(100, { message: "标题不能超过100个字符。" }),
-  description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(),
+  description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(), // Keep description validation
   image: z.any() // Use z.any() for FileList compatibility with SSR
     .optional()
     .refine(
@@ -103,7 +116,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    const [clearExistingImage, setClearExistingImage] = React.useState(false);
    const [clearExistingAttachment, setClearExistingAttachment] = React.useState(false);
    // State to control visibility of optional fields
-   const [showTypeSelect, setShowTypeSelect] = React.useState(false);
+   const [showTypeSelect, setShowTypeSelect] = React.useState(true); // Default to true for edit
    const [showImageUpload, setShowImageUpload] = React.useState(false);
    const [showAttachmentUpload, setShowAttachmentUpload] = React.useState(false);
 
@@ -113,7 +126,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     // Default values will be set in useEffect
     defaultValues: {
       eventType: 'note', // Default, will be overridden
-      title: "",
+      // title is removed from default values
       description: "",
       image: undefined,
       attachment: undefined,
@@ -122,13 +135,14 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   const attachmentFile = form.watch("attachment");
   const imageFile = form.watch("image");
+  const descriptionValue = form.watch("description"); // Watch description for title display
 
  // Reset form and manage visibility when the event prop changes or dialog opens/closes
  React.useEffect(() => {
     if (event && isOpen) {
         form.reset({
             eventType: event.eventType,
-            title: event.title,
+            // title is removed from reset
             description: event.description ?? "",
             image: undefined, // Reset file inputs on open
             attachment: undefined,
@@ -139,7 +153,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         setAttachmentName(event.attachment?.name ?? null); // Show current attachment name initially
 
         // Decide initial visibility based on whether the event HAS these properties
-        setShowTypeSelect(true); // Always show type for editing initially? Or make it explicit? Let's make it explicit toggle.
+        setShowTypeSelect(true); // Keep type always visible/toggleable for editing
         setShowImageUpload(!!event.imageUrl); // Show if there IS an image
         setShowAttachmentUpload(!!event.attachment); // Show if there IS an attachment
 
@@ -151,7 +165,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         // Reset everything when dialog closes
          form.reset({
             eventType: 'note',
-            title: "",
+            // title is removed from reset
             description: "",
             image: undefined,
             attachment: undefined,
@@ -162,7 +176,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         setClearExistingImage(false);
         setClearExistingAttachment(false);
         // Reset visibility toggles
-        setShowTypeSelect(false);
+        setShowTypeSelect(true); // Reset to default visibility state for edit
         setShowImageUpload(false);
         setShowAttachmentUpload(false);
     }
@@ -195,9 +209,12 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!event) return;
 
+    // Derive title from the description before submitting
+    const derivedTitle = deriveTitle(values.description);
+
     const updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>> = {
         eventType: values.eventType, // Include event type in update
-        title: values.title,
+        title: derivedTitle, // Set the derived title
         description: values.description,
     };
 
@@ -259,12 +276,16 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   if (!event) return null; // Don't render the dialog if no event is selected
 
+  // Derive title for display purposes based on current description form value
+  const displayTitle = deriveTitle(descriptionValue);
+
   return (
     <TooltipProvider>
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[480px]"> {/* Increased width slightly */}
             <DialogHeader>
-            <DialogTitle>编辑事件</DialogTitle> {/* Translate */}
+            {/* Display derived title */}
+            <DialogTitle className="truncate pr-8">{displayTitle}</DialogTitle>
             <DialogDescription>
                  更新事件详情。点击下方图标编辑类型、图片或附件。 {/* Updated Description */}
             </DialogDescription>
@@ -272,35 +293,29 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
 
-                {/* Title (Always Visible) */}
-                 <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                        <FormItem>
-                        {/* <FormLabel>标题</FormLabel> */}
-                        <FormControl>
-                            <Input
-                            placeholder="输入事件标题..."
-                            {...field}
-                             className="text-lg font-semibold"
-                            />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                {/* Description (Always Visible) */}
+                 {/* Title (Hidden/Read-Only - No longer directly editable) */}
+                 {/* You could optionally show the derived title here read-only if needed */}
+                 {/* <Input type="hidden" {...form.register("title")} /> */}
+                 {/* Or a disabled input for display */}
+                  {/* <FormItem>
+                     <FormLabel>标题 (自动生成)</FormLabel>
+                     <FormControl>
+                         <Input disabled value={displayTitle} className="text-lg font-semibold text-muted-foreground"/>
+                     </FormControl>
+                  </FormItem> */}
+
+
+                {/* Description (Now the primary content input) */}
                  <FormField
                     control={form.control}
                     name="description"
                     render={({ field }) => (
                         <FormItem>
-                         {/* <FormLabel>描述 (可选)</FormLabel> */}
+                         {/* <FormLabel>内容</FormLabel> Remove label or change to "内容" */}
                         <FormControl>
                             <Textarea
-                            placeholder="添加描述 (可选)..."
-                            className="resize-none min-h-[100px]"
+                            placeholder="编辑事件内容..." // Updated placeholder
+                            className="resize-none min-h-[150px] text-base" // Increased min-height
                             {...field}
                             value={field.value ?? ""}
                             />
@@ -513,7 +528,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                     </Tooltip>
                      <div className="flex-grow"></div> {/* Spacer */}
                     <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button>
-                    <Button type="submit">保存更改</Button>
+                     <Button type="submit" disabled={!descriptionValue?.trim()}>保存更改</Button> {/* Disable save if description is empty */}
                  </div>
             </form>
             </Form>

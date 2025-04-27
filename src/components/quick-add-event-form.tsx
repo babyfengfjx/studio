@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags, Send } from "lucide-react";
+import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Send } from "lucide-react";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { TimelineEvent, EventType } from "@/types/event";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast"; // Import useToast
-import { Separator } from "@/components/ui/separator"; // Import Separator
 
 
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
@@ -33,11 +32,12 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
 
 type QuickAddEventFormProps = {
-  onAddEvent: (event: Omit<TimelineEvent, 'id' | 'timestamp'>) => void;
+  // Title is no longer directly provided by this form
+  onAddEvent: (event: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => void;
 };
 
 export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
-  const [inputValue, setInputValue] = React.useState(""); // Combine title/desc for simplicity
+  const [description, setDescription] = React.useState(""); // Use description for the main input
   const [eventType, setEventType] = React.useState<EventType>('note');
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [attachmentFile, setAttachmentFile] = React.useState<File | null>(null);
@@ -47,6 +47,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
 
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const attachmentInputRef = React.useRef<HTMLInputElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null); // Ref for textarea
 
   // Handle image selection and preview
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,18 +97,27 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     setAttachmentName(null);
   };
 
+  // Auto-resize textarea height based on content
+  React.useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // Reset height
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // Set to scroll height
+    }
+  }, [description]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedValue = inputValue.trim();
-    if (!trimmedValue) {
-        toast({ title: "内容不能为空", description: "请输入事件内容或标题。", variant: "destructive" });
+    const trimmedDescription = description.trim();
+    if (!trimmedDescription) {
+        toast({ title: "内容不能为空", description: "请输入事件内容。", variant: "destructive" });
         return; // Prevent submission if input is empty
     }
 
-    // Split title (first line) and description (rest)
-    const lines = trimmedValue.split('\n');
-    const title = lines[0]; // Use the first line as title
-    const description = lines.length > 1 ? lines.slice(1).join('\n').trim() : undefined; // Use trim() for description
+    // Title will be derived by the parent component from the description
+    // const lines = trimmedDescription.split('\n');
+    // const title = lines[0]; // Use the first line as title
+    // const fullDescription = trimmedDescription; // Use the full input as description
+
 
     let imageUrl: string | undefined = undefined;
     let attachmentData: TimelineEvent['attachment'] | undefined = undefined;
@@ -128,49 +138,44 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
 
     onAddEvent({
       eventType,
-      title: title, // Title is now the first line
-      description: description, // Description is the rest
+      // title is removed - will be derived by parent
+      description: trimmedDescription, // Pass the full description
       imageUrl,
       attachment: attachmentData,
     });
 
     // Reset form after submission
-    setInputValue("");
+    setDescription("");
     setEventType('note'); // Reset to default type
     clearImage();
     clearAttachment();
+    // Reset textarea height
+    if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+    }
   };
 
   return (
     <TooltipProvider>
       {/* Use Card for better structure and styling in fixed position */}
-      <Card className="shadow-md overflow-hidden border-0 rounded-lg">
+      <Card className="shadow-md overflow-hidden border-0 rounded-lg bg-gradient-to-r from-background to-muted/50">
         <form onSubmit={handleSubmit}>
           <CardContent className="p-3 space-y-2"> {/* Reduced padding slightly */}
-            {/* Input field simulating Title/Content separation */}
-            <Textarea
-              placeholder="输入标题 (可选)" // Placeholder for Title
-              value={inputValue.split('\n')[0]} // Only show first line
-              onChange={(e) => {
-                const currentLines = inputValue.split('\n');
-                currentLines[0] = e.target.value;
-                setInputValue(currentLines.join('\n'));
-              }}
-              rows={1} // Single row for title-like appearance
-              className="w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base font-medium p-1 placeholder-muted-foreground/70" // Styling for title
-            />
-            <Separator className="my-1" /> {/* Separator line */}
+            {/* Combined Input field for description */}
              <Textarea
-              placeholder="记录您的想法、任务或日程..." // Placeholder for Content
-              value={inputValue.split('\n').slice(1).join('\n')} // Show lines after the first
-              onChange={(e) => {
-                const currentLines = inputValue.split('\n');
-                 // Keep the first line (title) and update the rest
-                setInputValue([currentLines[0], e.target.value].join('\n'));
-              }}
-              className="w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base min-h-[60px] p-1 placeholder-muted-foreground/70" // Adjusted min-height and padding
+              ref={textareaRef} // Add ref
+              placeholder="记录您的想法、任务或日程..." // Unified placeholder
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className={cn(
+                  "w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base p-1 placeholder-muted-foreground/70 overflow-hidden", // Added overflow-hidden
+                  "bg-transparent transition-all duration-200 ease-in-out", // Transparent background
+                  "min-h-[40px]" // Ensure a minimum height similar to one line input
+                )}
+              rows={1} // Start with 1 row, will auto-expand
             />
 
+            {/* REMOVED Separator */}
 
             {/* Previews and Attachment Name */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -211,13 +216,13 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             </div>
           </CardContent>
 
-          <CardFooter className="bg-muted/50 p-2 flex items-center justify-between gap-1">
+          <CardFooter className="bg-muted/30 p-2 flex items-center justify-between gap-1 border-t border-border/20">
             <div className="flex items-center gap-0.5"> {/* Reduced gap */}
                {/* Event Type Select */}
                 <Select value={eventType} onValueChange={(value) => setEventType(value as EventType)}>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <SelectTrigger className="w-auto h-7 px-1.5 border-0 bg-transparent shadow-none focus:ring-0"> {/* Smaller trigger */}
+                            <SelectTrigger className="w-auto h-7 px-1.5 border-0 bg-transparent shadow-none focus:ring-0 text-muted-foreground hover:text-foreground"> {/* Smaller trigger, hover effect */}
                                 <SelectValue>
                                 {eventType === 'note' && <StickyNote className="h-4 w-4" />}
                                 {eventType === 'todo' && <CheckSquare className="h-4 w-4" />}
@@ -255,7 +260,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7" // Smaller button
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
                     onClick={() => imageInputRef.current?.click()}
                     aria-label="添加图片"
                   >
@@ -274,7 +279,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7" // Smaller button
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
                     onClick={() => attachmentInputRef.current?.click()}
                     aria-label="添加附件"
                   >
@@ -288,7 +293,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" size="sm" className="h-7 px-3"> {/* Smaller button */}
+            <Button type="submit" size="sm" className="h-7 px-3" disabled={!description.trim()}> {/* Disable if description is empty */}
               <Send className="h-4 w-4 mr-1" /> 添加
             </Button>
 

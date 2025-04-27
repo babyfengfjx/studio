@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import type { EventType } from "@/types/event";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label"; // Import Label
 
 interface FilterControlsProps extends React.HTMLAttributes<HTMLDivElement> {
   selectedType: EventType | 'all';
@@ -31,10 +32,10 @@ const getEventTypeLabel = (eventType: EventType | 'all'): string => {
 
 export function FilterControls({ selectedType, onTypeChange, className, ...props }: FilterControlsProps) {
   return (
-    <div className={cn("flex items-center gap-2", className)} {...props}>
-       {/* <ListFilter className="h-5 w-5 text-muted-foreground" /> */}
-       <Select value={selectedType} onValueChange={onTypeChange}>
-        <SelectTrigger className="w-full sm:w-[180px]">
+    <div className={cn("grid gap-2", className)} {...props}>
+      <Label htmlFor="event-type-filter">按类型筛选</Label>
+      <Select value={selectedType} onValueChange={onTypeChange}>
+        <SelectTrigger id="event-type-filter" className="w-full"> {/* Use full width in dialog */}
           <SelectValue placeholder="按类型筛选..." />
         </SelectTrigger>
         <SelectContent>
