@@ -160,7 +160,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
       {/* Use Card for better structure and styling in fixed position */}
       <Card className="shadow-md overflow-hidden border-0 rounded-lg bg-gradient-to-r from-background to-muted/50">
         <form onSubmit={handleSubmit}>
-          <CardContent className="p-3 space-y-2"> {/* Reduced padding slightly */}
+          <CardContent className="p-3 space-y-2 pb-1"> {/* Adjusted bottom padding */}
             {/* Combined Input field for description */}
              <Textarea
               ref={textareaRef} // Add ref
@@ -182,7 +182,13 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                  {/* Image Preview */}
                 {imagePreviewUrl && (
                 <div className="relative w-16 h-16 rounded-md overflow-hidden border flex-shrink-0"> {/* Smaller preview */}
-                    <Image src={imagePreviewUrl} alt="图片预览" layout="fill" objectFit="cover" />
+                    <Image
+                        src={imagePreviewUrl}
+                        alt="图片预览"
+                        layout="fill"
+                        objectFit="cover"
+                        sizes="64px" // Add sizes attribute
+                    />
                     <Button
                     type="button"
                     variant="ghost"
@@ -318,4 +324,3 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     </TooltipProvider>
   );
 }
-

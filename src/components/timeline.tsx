@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Edit, Trash2, CalendarCheck, Paperclip, Image as ImageIcon, StickyNote, CheckSquare } from 'lucide-react'; // Added more icons
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale'; // Import Chinese locale
 import Image from 'next/image'; // Import next/image
 
@@ -57,6 +57,12 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
   // State for image preview dialog
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = React.useState<string | null>(null);
+   // State to track client-side rendering for date formatting
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Handler to open image dialog
   const handleImageClick = (imageUrl: string) => {
@@ -69,16 +75,21 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}> {/* Wrap the entire list for Dialog context */}
         <TooltipProvider> {/* Wrap with TooltipProvider */}
             {/* Adjusted bottom padding */}
-            <div className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12"> {/* Increased bottom padding for search bar */}
+             {/* Increased bottom padding to accommodate search bar */}
+            <div className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12">
                 {/* Central Timeline Line with Gradient */}
-                {/* Adjusted height to end slightly above the bottom */}
-                <div className="absolute left-1/2 top-0 bottom-6 w-1 bg-gradient-to-b from-blue-400 via-teal-400 to-purple-400 -translate-x-1/2 rounded-full"></div>
+                 {/* Adjusted height (bottom) to end slightly above the search area */}
+                <div className="absolute left-1/2 top-0 bottom-8 w-1 bg-gradient-to-b from-blue-400 via-teal-400 to-purple-400 -translate-x-1/2 rounded-b-full"></div>
 
                 <AnimatePresence initial={false}>
                     {events.map((event, index) => {
                     // If index is even, card is on the right, timestamp on the left.
                     // If index is odd, card is on the left, timestamp on the right.
                     const isCardRightAligned = index % 2 === 0;
+
+                    // Format date - only on client
+                    const formattedDate = isClient ? format(event.timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN }) : '';
+
 
                     return (
                         <motion.div
@@ -112,7 +123,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                                 // No specific self-alignment needed as parent controls horizontal alignment
                             )}>
                                 {/* Format date using Chinese locale and 24-hour format */}
-                                {format(event.timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN })}
+                                {formattedDate || <span className="opacity-50">加载中...</span>}
                             </div>
                             </div>
 
@@ -216,6 +227,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                                                         alt={`事件 "${event.title}" 的图片预览`}
                                                         fill
                                                         className="object-cover" // Cover the circle
+                                                        sizes="40px" // Add sizes attribute
                                                     />
                                                 </button>
                                             </DialogTrigger>
@@ -260,6 +272,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                         alt="放大的图片预览"
                         fill
                         className="object-contain rounded-md" // Use contain to show the whole image
+                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Add sizes attribute
                     />
                 </div>
             )}

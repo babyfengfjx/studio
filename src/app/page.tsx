@@ -156,7 +156,7 @@ export default function Home() {
   return (
     // Apply gradient background
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
-      {/* Main Content Area - Reduced bottom padding to accommodate fixed form & search */}
+      {/* Main Content Area - Increased bottom padding to accommodate fixed form & search */}
       <div className="container mx-auto px-4 w-full max-w-4xl pb-[220px]"> {/* Increased bottom padding */}
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
@@ -173,10 +173,10 @@ export default function Home() {
       </div>
 
       {/* Search Trigger / Expanded Search Bar Area - Positioned above the quick add form */}
-       <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16">
+       <div className="fixed bottom-[110px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16"> {/* Adjusted bottom position */}
          {/* Timeline Connector Line (Visible when search is NOT expanded) */}
          {!isSearchExpanded && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-6 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full"></div>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full mb-[-4px]"></div> {/* Adjusted height and margin */}
          )}
          <AnimatePresence mode="wait">
            {isSearchExpanded ? (
