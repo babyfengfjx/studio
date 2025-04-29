@@ -152,9 +152,7 @@ export default function Home() {
       );
   }
 
-
   return (
-    // Apply gradient background
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
       {/* Main Content Area - Increased bottom padding to accommodate fixed form & search */}
       <div className="container mx-auto px-4 w-full max-w-4xl pb-[220px]"> {/* Increased bottom padding */}
