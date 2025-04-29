@@ -165,7 +165,6 @@ export default function Home() {
       <div className="container mx-auto px-4 w-full max-w-4xl pb-[220px]"> {/* Increased bottom padding */}
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
-
         {/* Timeline Section - No top margin, adjusted bottom padding handled by parent */}
         <div className="mt-0">
              <Timeline
@@ -174,7 +173,6 @@ export default function Home() {
               onDeleteEvent={handleDeleteEvent}
              />
         </div>
-
       </div>
 
       {/* Search Trigger / Expanded Search Bar Area - Positioned above the quick add form */}
@@ -264,4 +262,3 @@ export default function Home() {
     </main>
   );
 }
-
