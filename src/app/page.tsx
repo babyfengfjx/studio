@@ -62,7 +62,7 @@ export default function Home() {
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false); // State for search expansion
   const [newlyAddedEventId, setNewlyAddedEventId] = React.useState<string | null>(null); // State for highlighting new event
   const quickAddFormRef = React.useRef<HTMLDivElement>(null); // Ref for the quick add form container
-  const [bottomPadding, setBottomPadding] = React.useState(140); // Initial bottom padding
+  const [bottomPadding, setBottomPadding] = React.useState(0); // Initial bottom padding, will be calculated
   const { toast } = useToast(); // Initialize toast hook
   const [isAiLoading, setIsAiLoading] = React.useState(false); // State for AI loading
 
@@ -76,22 +76,38 @@ export default function Home() {
 
    // Calculate bottom padding based on quick add form height
    React.useEffect(() => {
-    const updatePadding = () => {
-      if (quickAddFormRef.current) {
-        // Adjust padding: Form height + Search trigger height + some buffer
-        const formHeight = quickAddFormRef.current.offsetHeight;
-        // Estimate search trigger area height (adjust as needed)
-        const searchTriggerHeight = isSearchExpanded ? 80 : 60; // Approximate height
-        setBottomPadding(formHeight + searchTriggerHeight + 20); // Added buffer
-      }
+    // Function to calculate and set padding
+    const calculatePadding = () => {
+        if (quickAddFormRef.current) {
+            const formHeight = quickAddFormRef.current.offsetHeight;
+            setBottomPadding(formHeight + 16); // Form height + some buffer (p-4 = 16px)
+        } else {
+            // Fallback or initial padding if ref not ready
+            setBottomPadding(140); // Estimate default padding
+        }
     };
 
-    // Update padding on initial load and when search expands/collapses
-    updatePadding();
-    // Also update on window resize
-    window.addEventListener('resize', updatePadding);
-    return () => window.removeEventListener('resize', updatePadding);
-   }, [isSearchExpanded]); // Re-run when search expansion changes
+    // Initial calculation
+    calculatePadding();
+
+    // Recalculate on window resize
+    window.addEventListener('resize', calculatePadding);
+
+    // Use ResizeObserver for more precise form height changes (optional but better)
+    let resizeObserver: ResizeObserver | null = null;
+    if (quickAddFormRef.current) {
+        resizeObserver = new ResizeObserver(calculatePadding);
+        resizeObserver.observe(quickAddFormRef.current);
+    }
+
+    // Cleanup listeners
+    return () => {
+        window.removeEventListener('resize', calculatePadding);
+        if (resizeObserver && quickAddFormRef.current) {
+            resizeObserver.unobserve(quickAddFormRef.current);
+        }
+    };
+   }, []); // Empty dependency array, runs once on mount and cleans up
 
 
   // Updated handleAddEvent: Title is derived from description
@@ -235,7 +251,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
       {/* Main Content Area - Adjust bottom padding dynamically */}
        <div
-          className="container mx-auto px-4 w-full max-w-4xl"
+          className="container mx-auto px-4 w-full max-w-4xl flex-1" // Use flex-1 to take available space
           style={{ paddingBottom: `${bottomPadding}px` }} // Apply dynamic padding
        >
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
@@ -255,6 +271,10 @@ export default function Home() {
        <div ref={quickAddFormRef} className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-transparent pointer-events-none">
          {/* Container for centering content within the fixed area */}
          <div className="container mx-auto max-w-4xl relative pointer-events-auto">
+           {/* Quick Add Form takes full width within the centered container */}
+           <div className="w-full">
+             <QuickAddEventForm onAddEvent={handleAddEvent} />
+           </div>
            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely ABOVE the quick add form */}
              <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, mb-2 for spacing */}
                 <AnimatePresence mode="wait">
@@ -328,10 +348,6 @@ export default function Home() {
                 )}
                 </AnimatePresence>
             </div>
-           {/* Quick Add Form takes full width within the centered container */}
-           <div className="w-full">
-             <QuickAddEventForm onAddEvent={handleAddEvent} />
-           </div>
          </div>
        </div>
 
