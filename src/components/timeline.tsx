@@ -9,7 +9,7 @@ import { zhCN } from 'date-fns/locale'; // Import Chinese locale
 import Image from 'next/image'; // Import next/image
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'; // Removed CardTitle import
+import { Card, CardContent, CardFooter } from '@/components/ui/card'; // Removed CardHeader import
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,19 +62,14 @@ const FormattedTimestamp: React.FC<{ timestamp: Date }> = ({ timestamp }) => {
     }, [timestamp]); // Re-run if timestamp changes
 
     if (!formattedDate) {
-        // Render loading state or placeholder initially and on server
-        // return <span className="opacity-50">加载中...</span>;
         // Return formatted date directly during SSR/initial render to avoid hydration mismatch potential
-        // Note: This might show server time initially if server/client timezones differ significantly
-        // and user locale differs from server. Consider a more robust timezone handling if needed.
         try {
             return <>{format(timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN })}</>;
         } catch (e) {
-            // Fallback for invalid date during SSR
+             // Fallback for invalid date during SSR
             return <span className="opacity-50">...</span>;
         }
     }
-
     return <>{formattedDate}</>;
 };
 
@@ -149,13 +144,13 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                 }}
                                 // Main container for the row, using flex to align items
                                 className={cn(
-                                    "mb-12 flex items-center w-full relative", // Use items-center for vertical alignment
+                                    "mb-12 flex items-start w-full relative", // Use items-start for vertical alignment with timestamp
                                     isCardRightAligned ? 'flex-row' : 'flex-row-reverse' // Change order: timestamp first or card first
                                 )}
                                 style={{ zIndex: events.length - index }} // Ensure later items overlap for visual correctness
                             >
-                                {/* Timeline Dot - Centered vertically relative to the row */}
-                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                {/* Timeline Dot - Positioned relative to the timestamp */}
+                                <div className="absolute left-1/2 top-5 -translate-x-1/2 -translate-y-1/2 z-20">
                                 <div className="bg-accent rounded-full p-1.5 shadow-md ring-2 ring-background"> {/* Adjusted padding */}
                                     {getEventTypeIcon(event.eventType)}
                                 </div>
@@ -163,7 +158,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
 
                                 {/* Timestamp Column */}
                                 <div className={cn(
-                                    "w-1/2", // Takes up half the width
+                                    "w-1/2 pt-1", // Takes up half the width, add padding-top to align with card content slightly
                                     isCardRightAligned ? 'pr-8 text-right' : 'pl-8 text-left' // Padding away from center line, text aligned to outside
                                 )}>
                                 {/* Enhanced Timestamp Display */}
@@ -187,15 +182,18 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                         "bg-gradient-to-br from-card via-secondary/10 to-accent/10 dark:from-card dark:via-secondary/5 dark:to-accent/5"
                                     )}>
 
-                                        {/* Card Header - Only Actions now */}
-                                        <CardHeader className="pb-0 pt-2 px-2 flex-shrink-0"> {/* Adjusted padding */}
-                                            <div className="flex items-start justify-end"> {/* Only justify end for actions */}
-                                                {/* Actions */}
-                                                <div className="flex space-x-1 flex-shrink-0">
-                                                    {/* Edit button */}
+                                        {/* Card Header Removed */}
+
+                                        {/* Card Content (Description, Image, Actions) */}
+                                        <CardContent className={cn(
+                                            "pt-4 pb-4 px-4 flex-grow relative", // Add relative positioning for action buttons, adjust padding
+                                            event.description ? "" : "justify-end" // Only adjust justify if no description
+                                        )}>
+                                            {/* Action Buttons (Top Right) */}
+                                            <div className="absolute top-2 right-2 flex space-x-1 z-10">
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditEvent(event)} aria-label="编辑事件"> {/* Translate aria-label */}
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditEvent(event)} aria-label="编辑事件"> {/* Translate aria-label */}
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
                                                         </TooltipTrigger>
@@ -203,7 +201,6 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                                             <p>编辑事件</p>
                                                         </TooltipContent>
                                                     </Tooltip>
-                                                    {/* Delete Button */}
                                                     <AlertDialog>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -211,7 +208,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                        className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                                                         aria-label="删除事件" // Translate aria-label
                                                                         onClick={() => setEventToDelete(event)} // Set the event to delete on click
                                                                         >
@@ -249,35 +246,34 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                                         )}
                                                     </AlertDialog>
                                                 </div>
-                                            </div>
-                                        </CardHeader>
 
-                                        {/* Card Content (Description and Image) */}
-                                        <CardContent className={cn(
-                                            "pt-2 pb-4 px-4 flex-grow flex items-center", // Adjusted padding, make content a flex container, center items vertically
-                                            event.description ? "justify-between" : "justify-end" // Justify between if description exists, else end for just image
-                                        )}>
-                                            {event.description && (
-                                                <p className="text-sm text-foreground whitespace-pre-wrap flex-1 mr-3">{event.description}</p> /* Added whitespace-pre-wrap, flex-1, margin-right */
-                                            )}
-                                            {/* Circular Image Preview (if imageUrl exists) */}
-                                            {event.imageUrl && (
-                                                <DialogTrigger asChild>
-                                                    <button
-                                                        onClick={() => handleImageClick(event.imageUrl!)}
-                                                        className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border-2 border-border hover:border-primary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                                        aria-label="查看图片"
-                                                    >
-                                                        <Image
-                                                            src={event.imageUrl}
-                                                            alt={`事件图片预览`} // Updated alt text
-                                                            fill
-                                                            className="object-cover" // Cover the circle
-                                                            sizes="40px" // Add sizes attribute
-                                                        />
-                                                    </button>
-                                                </DialogTrigger>
-                                            )}
+                                            {/* Main Content */}
+                                             <div className={cn(
+                                                "flex items-center", // Flex container for description and image
+                                                event.description ? "justify-between" : "justify-end"
+                                             )}>
+                                                {event.description && (
+                                                    <p className="text-sm text-foreground whitespace-pre-wrap flex-1 mr-3 pr-12">{event.description}</p> /* Added whitespace-pre-wrap, flex-1, margin-right, padding right for buttons */
+                                                )}
+                                                {/* Circular Image Preview (if imageUrl exists) */}
+                                                {event.imageUrl && (
+                                                    <DialogTrigger asChild>
+                                                        <button
+                                                            onClick={() => handleImageClick(event.imageUrl!)}
+                                                            className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border-2 border-border hover:border-primary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                                            aria-label="查看图片"
+                                                        >
+                                                            <Image
+                                                                src={event.imageUrl}
+                                                                alt={`事件图片预览`} // Updated alt text
+                                                                fill
+                                                                className="object-cover" // Cover the circle
+                                                                sizes="40px" // Add sizes attribute
+                                                            />
+                                                        </button>
+                                                    </DialogTrigger>
+                                                )}
+                                            </div>
                                         </CardContent>
 
 

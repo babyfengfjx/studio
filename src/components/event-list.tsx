@@ -9,7 +9,7 @@ import { zhCN } from 'date-fns/locale';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'; // Removed CardTitle import
+import { Card, CardContent, CardFooter } from '@/components/ui/card'; // Removed CardHeader import
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,18 +128,14 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                      }}
                     >
                     <Card className={cn("shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden", isNewlyAdded && "border-2 border-primary")}>
-                        <CardHeader className="p-3 pb-2 bg-muted/30 border-b">
-                        <div className="flex items-center justify-between gap-2">
-                           <div className="flex items-center gap-2 min-w-0">
-                               {getEventTypeIcon(event.eventType)}
-                               {/* Removed CardTitle display */}
-                               <span className="text-base font-medium truncate flex-1">{deriveTitle(event.description)}</span> {/* Display derived title */}
-                           </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  <FormattedTimestamp timestamp={event.timestamp} formatString="M月d日 HH:mm" />
-                               </span>
-                               {/* Edit button */}
+                        {/* Card Header Removed */}
+                        <CardContent className="p-3 text-sm text-foreground relative"> {/* Add relative positioning */}
+                            {/* Action Buttons (Top Right) */}
+                             <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                                {/* Timestamp moved here */}
+                                <span className="text-xs text-muted-foreground whitespace-nowrap mr-1">
+                                    <FormattedTimestamp timestamp={event.timestamp} formatString="M月d日 HH:mm" />
+                                </span>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEditEvent(event)} aria-label="编辑事件">
@@ -150,7 +146,6 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                     <p>编辑事件</p>
                                     </TooltipContent>
                                 </Tooltip>
-                                {/* Delete Button */}
                                 <AlertDialog>
                                     <Tooltip>
                                     <TooltipTrigger asChild>
@@ -194,9 +189,14 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                     )}
                                 </AlertDialog>
                             </div>
-                        </div>
-                        </CardHeader>
-                        <CardContent className="p-3 text-sm text-foreground">
+
+                            {/* Type Icon and Derived Title */}
+                            <div className="flex items-center gap-2 mb-2 pr-20"> {/* Add padding-right for buttons */}
+                               {getEventTypeIcon(event.eventType)}
+                               <span className="text-base font-medium truncate flex-1">{deriveTitle(event.description)}</span> {/* Display derived title */}
+                            </div>
+
+                            {/* Main Content (Description and Image) */}
                             {event.description && <p className="whitespace-pre-wrap mb-2">{event.description}</p>}
                             {event.imageUrl && (
                                 <DialogTrigger asChild>
@@ -217,7 +217,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                             )}
                         </CardContent>
                          {event.attachment && (
-                            <CardFooter className="p-3 pt-0 text-xs">
+                            <CardFooter className="p-3 pt-0 text-xs border-t border-border/10 mt-2">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="link" size="sm" className="text-muted-foreground p-0 h-auto">
