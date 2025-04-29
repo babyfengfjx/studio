@@ -105,35 +105,37 @@ export default function Home() {
 
   // Function to handle the actual edit submission
   // Accepts Partial update data
-  const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
+ const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
      const originalEvent = allEvents.find(e => e.id === id);
-     // If description is updated, also update the title
-     const finalUpdatedData = { ...updatedData };
+     if (!originalEvent) return; // Guard clause
+
+     // Prepare the final update object, explicitly typing it might help clarity
+     const finalUpdatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> & { title?: string } = { ...updatedData };
+
+     // If description is being updated (and is not undefined), derive the new title
      if (updatedData.description !== undefined) {
          finalUpdatedData.title = deriveTitle(updatedData.description);
-     } else if (updatedData.title === undefined && originalEvent) {
-         // Ensure title is updated if description changes, even if title wasn't explicitly passed
-         // Check if the existing description needs re-deriving
-         const currentDerivedTitle = deriveTitle(originalEvent.description);
-         if (originalEvent.title !== currentDerivedTitle) {
-            finalUpdatedData.title = currentDerivedTitle;
-         }
      }
-
+     // Note: No explicit 'else' needed. If `updatedData.title` was provided, it's already in `finalUpdatedData`.
+     // If neither description nor title were in `updatedData`, the event's title remains unchanged implicitly via the spread below.
 
     setAllEvents((prevEvents) =>
       sortEventsDescending(prevEvents.map((event) =>
         event.id === id ? { ...event, ...finalUpdatedData } : event // Merge partial updates
       ))
     );
+
      toast({
         title: "事件已更新",
-        description: `类型为 "${getEventTypeLabel(finalUpdatedData.eventType ?? originalEvent?.eventType)}" 的事件 "${finalUpdatedData.title ?? originalEvent?.title}" 已更新。`, // Include type and use existing title if not updated
+        // Use nullish coalescing for safety, checking finalUpdatedData first for potentially updated values
+        description: `类型为 "${getEventTypeLabel(finalUpdatedData.eventType ?? originalEvent.eventType)}" 的事件 "${finalUpdatedData.title ?? originalEvent.title}" 已更新。`,
       });
+
     // Close the dialog after successful edit
     setIsEditDialogOpen(false);
     setEditingEvent(null);
   };
+
 
   // Filter events based on search term and selected type
   const filteredEvents = React.useMemo(() => {
@@ -151,10 +153,10 @@ export default function Home() {
 
   // Render only on the client to avoid hydration issues with Date formatting and initial load
   if (!isClient) {
-     // You could show a loading spinner or skeleton here
+     // Basic loading indicator
      return (
         <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4">
-          <p className="text-foreground">加载中...</p> {/* Basic loading indicator */}
+          <p className="text-foreground">加载中...</p>
         </main>
       );
   }
@@ -177,7 +179,7 @@ export default function Home() {
 
       {/* Search Trigger / Expanded Search Bar Area - Positioned above the quick add form */}
        {/* Adjusted bottom position DOWNWARDS slightly closer to the form */}
-       <div className="fixed bottom-[150px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16">
+       <div className="fixed bottom-[140px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16"> {/* Moved slightly lower */}
          {/* Timeline Connector Line (Visible when search is NOT expanded) */}
          {!isSearchExpanded && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full mb-[-4px]"></div> /* Adjusted height and margin */
