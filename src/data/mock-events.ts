@@ -11,14 +11,14 @@ export const mockEvents: TimelineEvent[] = [
     eventType: 'schedule',
     title: '', // Title removed - will be derived
     description: '与团队讨论项目目标和时间表。\n这是第一行。\n这是第二行。',
-    attachment: { name: '会议纪要.pdf' }
+    // Removed attachment
   },
   {
     id: '2',
     timestamp: new Date(baseDate.getTime() - 1000 * 60 * 30), // 9:30 AM on baseDate
     eventType: 'note',
     title: '', // Title removed - will be derived
-    description: '评审新功能的最新 UI 模型。查看附件获取详细信息。',
+    description: '评审新功能的最新 UI 模型。', // Removed attachment reference
     imageUrl: 'https://picsum.photos/seed/designreview/400/200',
   },
   {
@@ -41,8 +41,8 @@ export const mockEvents: TimelineEvent[] = [
     timestamp: new Date(baseDate.getTime() + 1000 * 60 * 60 * 24), // 10:00 AM on the day after baseDate
     eventType: 'todo',
     title: '', // Title removed - will be derived
-    description: '准备构建以部署到预发布环境。部署说明已附上。',
-     attachment: { name: '部署说明.docx' }
+    description: '准备构建以部署到预发布环境。', // Removed attachment reference
+     // Removed attachment
   },
    {
     id: '6',
@@ -51,7 +51,7 @@ export const mockEvents: TimelineEvent[] = [
     title: '', // Title removed - will be derived
     description: '团队一起外出享用午餐。这是强制描述。', // Added mandatory description
      imageUrl: 'https://picsum.photos/seed/teamlunch/400/200',
-     attachment: { name: '餐厅收据.png' }
+     // Removed attachment
   },
    {
     id: '7',
@@ -61,3 +61,4 @@ export const mockEvents: TimelineEvent[] = [
     description: '记录一个关于新功能的新想法。', // Example without image/attachment
   },
 ];
+

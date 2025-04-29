@@ -5,7 +5,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags, Upload } from "lucide-react"; // Added Upload icon
+import { Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags, Upload, Paperclip } from "lucide-react"; // Removed Paperclip
 import { motion } from 'framer-motion';
 
 import { Button } from "@/components/ui/button";
@@ -42,8 +42,6 @@ import { cn } from "@/lib/utils";
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-// Add other allowed types if needed
-// const ALLOWED_ATTACHMENT_TYPES = [ ... ];
 
 // Define allowed event types
 const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
@@ -67,6 +65,7 @@ const deriveTitle = (description?: string): string => {
 
 // Zod schema with Chinese validation messages and file inputs
 // Title is removed from validation
+// Attachment field is removed
 const formSchema = z.object({
   eventType: z.enum(EVENT_TYPES, { required_error: "请选择事件类型。" }), // Add eventType validation
   description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(), // Keep description validation
@@ -74,7 +73,6 @@ const formSchema = z.object({
     .optional()
     .refine(
         (files) => {
-            // Check if files is a FileList and has at least one file before accessing properties
             if (!isBrowser || !files || !(files instanceof FileList) || files.length === 0) return true; // Skip on server or if no files
             return files[0].size <= MAX_FILE_SIZE;
         },
@@ -82,24 +80,12 @@ const formSchema = z.object({
     )
     .refine(
         (files) => {
-             // Check if files is a FileList and has at least one file before accessing properties
              if (!isBrowser || !files || !(files instanceof FileList) || files.length === 0) return true; // Skip on server or if no files
             return ALLOWED_IMAGE_TYPES.includes(files[0].type);
         },
         "只允许上传 JPG, PNG, WEBP, GIF 格式的图片。"
     ),
-  attachment: z.any() // Use z.any() for FileList compatibility with SSR
-    .optional()
-     .refine(
-        (files) => {
-            // Check if files is a FileList and has at least one file before accessing properties
-            if (!isBrowser || !files || !(files instanceof FileList) || files.length === 0) return true; // Skip on server or if no files
-            return files[0].size <= MAX_FILE_SIZE;
-        },
-        `附件大小不能超过 5MB。`
-    )
-    // Example: Add more specific attachment type validation if needed
-    // .refine(...)
+  // attachment field removed
 });
 
 
@@ -107,26 +93,26 @@ type EditEventFormProps = {
   event: TimelineEvent | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  // Attachment removed from TimelineEvent Omit
   onEditEvent: (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>>) => void; // Title removed from type constraint
 };
 
 export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: EditEventFormProps) {
    // Store initial values separately to manage preview states
    const [initialImageUrl, setInitialImageUrl] = React.useState<string | undefined>(undefined);
-   const [initialAttachmentName, setInitialAttachmentName] = React.useState<string | undefined>(undefined);
+   // Removed initialAttachmentName state
    const [imageFileName, setImageFileName] = React.useState<string | null>(null); // State for selected image file name
-   const [attachmentName, setAttachmentName] = React.useState<string | null>(null);
+   // Removed attachmentName state
    // Flags to track if the user wants to clear existing files
    const [clearExistingImage, setClearExistingImage] = React.useState(false);
-   const [clearExistingAttachment, setClearExistingAttachment] = React.useState(false);
+   // Removed clearExistingAttachment state
    // State to control visibility of optional fields
    const [showTypeSelect, setShowTypeSelect] = React.useState(true); // Default to true for edit
    const [showImageUpload, setShowImageUpload] = React.useState(false);
-   const [showAttachmentUpload, setShowAttachmentUpload] = React.useState(false);
+   // Removed showAttachmentUpload state
 
    const imageInputRef = React.useRef<HTMLInputElement>(null);
-   const attachmentInputRef = React.useRef<HTMLInputElement>(null);
-
+   // Removed attachmentInputRef
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -135,11 +121,11 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
       eventType: 'note', // Default, will be overridden
       description: "",
       image: undefined,
-      attachment: undefined,
+      // attachment removed
     },
   });
 
-  const attachmentFile = form.watch("attachment");
+  // Removed attachmentFile watcher
   const imageFile = form.watch("image");
   const descriptionValue = form.watch("description"); // Watch description for title display in header
 
@@ -150,22 +136,22 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
             eventType: event.eventType,
             description: event.description ?? "",
             image: undefined, // Reset file inputs on open
-            attachment: undefined,
+            // attachment removed
         });
         // Set initial values for display/clearing logic
         setInitialImageUrl(event.imageUrl);
-        setInitialAttachmentName(event.attachment?.name);
-        setAttachmentName(event.attachment?.name ?? null); // Show current attachment name initially
+        // Removed setInitialAttachmentName
+        // Removed setAttachmentName
         setImageFileName(null); // Reset selected image file name
 
         // Decide initial visibility based on whether the event HAS these properties
         setShowTypeSelect(true); // Keep type always visible/toggleable for editing
         setShowImageUpload(!!event.imageUrl); // Show if there IS an image
-        setShowAttachmentUpload(!!event.attachment); // Show if there IS an attachment
+        // Removed setShowAttachmentUpload logic
 
         // Reset clearing flags
         setClearExistingImage(false);
-        setClearExistingAttachment(false);
+        // Removed setClearExistingAttachment
 
     } else if (!isOpen) {
         // Reset everything when dialog closes
@@ -173,43 +159,23 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
             eventType: 'note',
             description: "",
             image: undefined,
-            attachment: undefined,
+            // attachment removed
         });
         setInitialImageUrl(undefined);
-        setInitialAttachmentName(undefined);
-        setAttachmentName(null);
+        // Removed setInitialAttachmentName
+        // Removed setAttachmentName
         setImageFileName(null);
         setClearExistingImage(false);
-        setClearExistingAttachment(false);
+        // Removed setClearExistingAttachment
         // Reset visibility toggles
         setShowTypeSelect(true); // Reset to default visibility state for edit
         setShowImageUpload(false);
-        setShowAttachmentUpload(false);
+        // Removed setShowAttachmentUpload(false);
     }
  }, [event, isOpen, form]);
 
 
-
-   // Update attachment name display based on selected file or initial state
-   React.useEffect(() => {
-        if (attachmentFile && attachmentFile instanceof FileList && attachmentFile.length > 0) {
-            const file = attachmentFile[0];
-            if (file.size <= MAX_FILE_SIZE) {
-                setAttachmentName(file.name);
-                setClearExistingAttachment(false); // New file overrides clear intent
-            } else {
-                // Invalid new file, revert to showing initial name if it exists
-                 setAttachmentName(initialAttachmentName ?? null);
-                 form.setValue("attachment", undefined); // Clear invalid file from form
-            }
-        } else if (!clearExistingAttachment) {
-            // No new file and not cleared, show the initial attachment name
-            setAttachmentName(initialAttachmentName ?? null);
-        } else {
-            // Explicitly cleared
-            setAttachmentName(null);
-        }
-   }, [attachmentFile, initialAttachmentName, clearExistingAttachment, form]); // Added form dep
+ // Removed useEffect for attachment name display
 
     // Update image file name display
     React.useEffect(() => {
@@ -220,13 +186,12 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                 setClearExistingImage(false);
             } else {
                 setImageFileName(null); // Clear name if file is invalid
-                // Optionally clear the form value if invalid file selected?
-                // form.setValue("image", undefined);
+                // form.setValue("image", undefined); // Consider clearing invalid file
             }
         } else {
             setImageFileName(null); // Clear name if no file is selected
         }
-    }, [imageFile, form]);
+    }, [imageFile, form]); // Removed initialAttachmentName, clearExistingAttachment deps
 
 
 
@@ -234,12 +199,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     if (!event) return;
 
     // Title is no longer explicitly managed or derived here for submission
-    // It will be derived dynamically by display components (Timeline, EventList)
-
-    const updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> = { // Title removed from type
+    const updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> = { // Title and attachment removed from type
         eventType: values.eventType, // Include event type in update
         description: values.description,
-        // title: '', // No longer setting title here
     };
 
     // Handle Image: Upload new, clear existing, or keep existing
@@ -258,17 +220,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     } // If neither new image nor clear flag, existing imageUrl remains implicitly unchanged
 
 
-     // Handle Attachment: Upload new, clear existing, or keep existing
-     const attachmentInput = values.attachment as unknown as FileList | undefined; // Type assertion
-     if (attachmentInput && attachmentInput.length > 0) {
-         const file = attachmentInput[0];
-          // Validation is done by Zod and useEffect, assume file is valid here if present
-         // In a real app, upload the file here and get a URL/identifier
-         updatedData.attachment = { name: file.name };
-
-     } else if (clearExistingAttachment) {
-         updatedData.attachment = undefined; // Explicitly set to undefined to clear
-     } // If neither new attachment nor clear flag, existing attachment remains implicitly unchanged
+     // Removed Attachment handling logic
 
 
     onEditEvent(event.id, updatedData);
@@ -287,19 +239,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         setClearExistingImage(true); // Mark existing image for removal on save
         setImageFileName(null); // Clear display name
         if (imageInputRef.current) imageInputRef.current.value = ""; // Reset input element
-        // Optional: Hide the input again?
-        // setShowImageUpload(false);
    };
 
-    // Function to handle clearing the attachment (newly selected or existing)
-   const handleClearAttachment = () => {
-        form.setValue("attachment", undefined); // Clear file input in form
-        setClearExistingAttachment(true); // Mark existing attachment for removal on save
-        setAttachmentName(null); // Name cleared by useEffect
-        if (attachmentInputRef.current) attachmentInputRef.current.value = ""; // Reset input element
-        // Optional: Hide the input again?
-        // setShowAttachmentUpload(false);
-   };
+    // Removed handleClearAttachment function
 
   if (!event) return null; // Don't render the dialog if no event is selected
 
@@ -308,14 +250,12 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   return (
     <TooltipProvider>
-        {/* Added max-h and overflow-y-auto to DialogContent */}
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[480px] max-h-[90vh] flex flex-col"> {/* Increased width, added flex props */}
             <DialogHeader>
-            {/* Display derived title for context */}
             <DialogTitle className="truncate pr-8">{displayTitle}</DialogTitle>
             <DialogDescription>
-                 更新事件详情。点击下方图标编辑类型、图片或附件。 {/* Updated Description */}
+                 更新事件详情。点击下方图标编辑类型或图片。 {/* Updated Description */}
             </DialogDescription>
             </DialogHeader>
             {/* Form container scrolls */}
@@ -323,15 +263,12 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                 <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4"> {/* Removed scroll from form */}
 
-                    {/* Title input removed */}
-
                     {/* Description (Now the primary content input) */}
                     <FormField
                         control={form.control}
                         name="description"
                         render={({ field }) => (
                             <FormItem>
-                            {/* <FormLabel>内容</FormLabel> Remove label or change to "内容" */}
                             <FormControl>
                                 <Textarea
                                 placeholder="编辑事件内容..." // Updated placeholder
@@ -393,7 +330,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                             <FormField
                                 control={form.control}
                                 name="image"
-                                render={({ field }) => ( // Destructure field here but don't spread it onto Input
+                                render={({ field }) => (
                                     <FormItem className="mt-4">
                                         <FormLabel className="flex items-center gap-2">
                                             <ImageIcon className="h-4 w-4" /> {initialImageUrl ? "替换图片" : "上传图片"} (可选, 最多 5MB)
@@ -435,7 +372,6 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                                                 ref={imageInputRef} // Assign ref
                                                 onChange={(e) => {
                                                     form.setValue("image", e.target.files); // Update form state correctly
-                                                    // Optionally trigger validation if needed: form.trigger("image");
                                                 }}
                                                 onBlur={field.onBlur}
                                                 name={field.name}
@@ -444,7 +380,6 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                                         <FormDescription>
                                             {initialImageUrl && !imageFileName && !clearExistingImage ? `当前图片: ${initialImageUrl.substring(initialImageUrl.lastIndexOf('/') + 1) || '图片'}` : ""}
                                             {initialImageUrl && clearExistingImage ? "当前图片将被移除。" : ""}
-                                            {/* {imageFileName ? `已选择: ${imageFileName}` : ""} */}
                                         </FormDescription>
                                         <FormMessage />
                                     </FormItem>
@@ -453,70 +388,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                         </motion.div>
                     )}
 
-                    {/* Attachment Upload */}
-                    {showAttachmentUpload && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                            <FormField
-                                control={form.control}
-                                name="attachment"
-                                render={({ field }) => ( // Destructure field here
-                                    <FormItem className="mt-4">
-                                        <FormLabel className="flex items-center gap-2">
-                                            <Paperclip className="h-4 w-4" /> {initialAttachmentName ? "替换附件" : "添加附件"} (可选, 最多 5MB)
-                                        </FormLabel>
-                                        {/* Custom File Input Look */}
-                                         <div className="flex items-center gap-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => attachmentInputRef.current?.click()}
-                                                className="flex-shrink-0"
-                                            >
-                                                <Upload className="h-4 w-4 mr-2" />
-                                                选择文件
-                                            </Button>
-                                            <span className="text-sm text-muted-foreground truncate flex-1">
-                                                {attachmentName ?? (clearExistingAttachment ? "无文件" : "未选择文件")}
-                                            </span>
-                                            {/* Clear Button */}
-                                            {(attachmentName || (initialAttachmentName && !clearExistingAttachment)) && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
-                                                    onClick={handleClearAttachment}
-                                                    aria-label="清除附件"
-                                                >
-                                                    <XCircle className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                         {/* Hidden Actual Input */}
-                                        <FormControl>
-                                            <Input
-                                                type="file"
-                                                className="hidden" // Hide the default input
-                                                ref={attachmentInputRef} // Assign ref
-                                                onChange={(e) => {
-                                                    form.setValue("attachment", e.target.files); // Update form state
-                                                     // Handled by useEffect now: setClearExistingAttachment(false);
-                                                }}
-                                                onBlur={field.onBlur}
-                                                name={field.name}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            {initialAttachmentName && !attachmentName && !clearExistingAttachment ? `当前附件: ${initialAttachmentName}` : ""}
-                                            {initialAttachmentName && clearExistingAttachment ? "当前附件将被移除。" : ""}
-                                            {/* {attachmentName ? `已选择: ${attachmentName}` : ""} */}
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </motion.div>
-                    )}
+                    {/* Removed Attachment Upload Section */}
 
                      {/* This empty div ensures the footer doesn't overlap last form item */}
                      <div className="h-1"></div>
@@ -561,23 +433,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                              <p>{initialImageUrl ? "编辑图片" : "添加图片"}</p>
                         </TooltipContent>
                     </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                             <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setShowAttachmentUpload(!showAttachmentUpload)}
-                                className={cn("text-muted-foreground", showAttachmentUpload && "bg-accent text-accent-foreground")}
-                                aria-label={initialAttachmentName ? "编辑附件" : "添加附件"}
-                            >
-                                <Paperclip className="h-5 w-5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                             <p>{initialAttachmentName ? "编辑附件" : "添加附件"}</p>
-                        </TooltipContent>
-                    </Tooltip>
+                    {/* Removed Attachment Tooltip/Button */}
                      <div className="flex-grow"></div> {/* Spacer */}
                     <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button>
                     {/* Trigger form submission via formRef */}
@@ -589,5 +445,3 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     </TooltipProvider>
   );
 }
-
-    

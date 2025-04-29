@@ -33,7 +33,7 @@ Events:
   Type: {{eventType}}
   Description: {{description}}
   {{#if imageUrl}}(Has Image){{/if}}
-  {{#if attachment}}(Has Attachment: {{attachment.name}}){{/if}}
+  {{!-- Removed attachment handling --}}
 
 {{/each}}
 {{else}}

@@ -3,13 +3,13 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit, Trash2, CalendarCheck, Paperclip, Image as ImageIcon, StickyNote, CheckSquare } from 'lucide-react';
+import { Edit, Trash2, CalendarCheck, Image as ImageIcon, StickyNote, CheckSquare } from 'lucide-react'; // Removed Paperclip
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card'; // Removed CardHeader import
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardFooter, CardHeader
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,16 +67,13 @@ const FormattedTimestamp: React.FC<{ timestamp: Date; formatString?: string }> =
     const [formattedDate, setFormattedDate] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        // Format the date only on the client side after mount
         setFormattedDate(format(timestamp, formatString, { locale: zhCN }));
     }, [timestamp, formatString]); // Re-run if timestamp changes
 
     if (!formattedDate) {
-         // Return formatted date directly during SSR/initial render to avoid hydration mismatch potential
         try {
             return <>{format(timestamp, formatString, { locale: zhCN })}</>;
         } catch (e) {
-             // Fallback for invalid date during SSR
             return <span className="opacity-50">...</span>;
         }
     }
@@ -87,6 +84,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
   const [eventToDelete, setEventToDelete] = React.useState<TimelineEvent | null>(null);
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = React.useState<string | null>(null);
+  const [hoveredEventId, setHoveredEventId] = React.useState<string | null>(null); // Track hovered event
 
   const handleImageClick = (imageUrl: string) => {
     setSelectedImageUrl(imageUrl);
@@ -109,6 +107,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
             ) : (
                 events.map((event) => {
                 const isNewlyAdded = event.id === newlyAddedEventId;
+                const isHovered = hoveredEventId === event.id; // Check if the current event is hovered
                 return (
                     <motion.div
                     key={event.id}
@@ -126,17 +125,23 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                         damping: 30,
                         ...(isNewlyAdded ? highlightAnimation.transition : {}),
                      }}
+                     onMouseEnter={() => setHoveredEventId(event.id)} // Set hovered ID on mouse enter
+                     onMouseLeave={() => setHoveredEventId(null)} // Clear hovered ID on mouse leave
+                     className="relative" // Add relative positioning for absolute positioned actions
                     >
-                    {/* Add group class for hover effect */}
-                    <Card className={cn("shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden group", isNewlyAdded && "border-2 border-primary")}>
-                        {/* Card Header Removed */}
-                        <CardContent className="p-3 text-sm text-foreground relative"> {/* Add relative positioning */}
-                            {/* Action Buttons (Top Right) - Appear on hover */}
-                             <div className="absolute top-2 right-2 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200">
-                                {/* Timestamp moved here */}
-                                <span className="text-xs text-muted-foreground whitespace-nowrap mr-1">
-                                    <FormattedTimestamp timestamp={event.timestamp} formatString="M月d日 HH:mm" />
-                                </span>
+                    {/* Action Buttons Container - Positioned above the card */}
+                    <AnimatePresence>
+                        {isHovered && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                                animate={{ opacity: 1, y: -15, scale: 1 }} // Move up slightly less than timeline
+                                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 15, duration: 0.2 }}
+                                className={cn(
+                                    "absolute left-1/2 -translate-x-1/2 top-0 z-20 flex space-x-1 p-1 rounded-full bg-background shadow-lg border border-border/50",
+                                )}
+                                style={{ marginTop: '-5px' }} // Offset slightly above the card
+                            >
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEditEvent(event)} aria-label="编辑事件">
@@ -171,7 +176,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                         <AlertDialogHeader>
                                         <AlertDialogTitle>确定要删除吗？</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                             此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}" 的事件。 {/* Removed title reference */}
+                                             此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}" 的事件。
                                         </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -189,12 +194,28 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                     </AlertDialogContent>
                                     )}
                                 </AlertDialog>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Event Card */}
+                    <Card className={cn(
+                        "shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden", // Removed group class
+                        isNewlyAdded && "border-2 border-primary",
+                        "bg-gradient-to-br from-card via-secondary/10 to-accent/10 dark:from-card dark:via-secondary/5 dark:to-accent/5" // Add gradient
+                    )}>
+                        <CardContent className="p-3 text-sm text-foreground relative">
+                             {/* Top Right Corner: Timestamp */}
+                             <div className="absolute top-2 right-2 z-10">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                    <FormattedTimestamp timestamp={event.timestamp} formatString="M月d日 HH:mm" />
+                                </span>
                             </div>
 
                             {/* Type Icon and Derived Title */}
-                            <div className="flex items-center gap-2 mb-2 pr-20"> {/* Add padding-right for buttons */}
+                            <div className="flex items-center gap-2 mb-2 pr-16"> {/* Adjust padding-right if needed */}
                                {getEventTypeIcon(event.eventType)}
-                               <span className="text-base font-medium truncate flex-1">{deriveTitle(event.description)}</span> {/* Display derived title */}
+                               <span className="text-base font-medium truncate flex-1">{deriveTitle(event.description)}</span>
                             </div>
 
                             {/* Main Content (Description and Image) */}
@@ -208,7 +229,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                 >
                                     <Image
                                     src={event.imageUrl}
-                                    alt={`事件图片预览`} // Updated alt text
+                                    alt={`事件图片预览`}
                                     width={80}
                                     height={80}
                                     className="object-cover w-full h-full"
@@ -217,21 +238,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                 </DialogTrigger>
                             )}
                         </CardContent>
-                         {event.attachment && (
-                            <CardFooter className="p-3 pt-0 text-xs border-t border-border/10 mt-2">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="link" size="sm" className="text-muted-foreground p-0 h-auto">
-                                            <Paperclip className="h-3 w-3 mr-1" />
-                                            {event.attachment.name}
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>下载附件: {event.attachment.name}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </CardFooter>
-                        )}
+                         {/* Removed CardFooter for Attachment */}
                     </Card>
                     </motion.div>
                 );
@@ -264,11 +271,8 @@ const deriveTitle = (description?: string): string => {
     const lines = description.split('\n');
     const firstLine = lines[0].trim();
     if (firstLine) {
-        // Use first line or truncate if longer than 50 chars
         return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
     }
-    // If first line is empty but there's more content, use a snippet
     const snippet = description.trim().substring(0, 50);
-    // Add ellipsis if snippet was truncated, ensure it's not empty
     return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
 };

@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Send } from "lucide-react";
+import { Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Send, Paperclip } from "lucide-react"; // Keep Paperclip for now, maybe used elsewhere? -> Removed Paperclip
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
@@ -25,14 +25,13 @@ import { useToast } from "@/hooks/use-toast"; // Import useToast
 // Define MAX_FILE_SIZE constant (e.g., 5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-// Add other allowed types if needed
-// const ALLOWED_ATTACHMENT_TYPES = [ ... ];
 
 // Define allowed event types
 const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
 
 type QuickAddEventFormProps = {
   // Title is no longer directly provided by this form
+  // Attachment is removed
   onAddEvent: (event: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => void;
 };
 
@@ -40,13 +39,12 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
   const [description, setDescription] = React.useState(""); // Use description for the main input
   const [eventType, setEventType] = React.useState<EventType>('note');
   const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [attachmentFile, setAttachmentFile] = React.useState<File | null>(null);
+  // Removed attachmentFile and attachmentName state
   const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(null);
-  const [attachmentName, setAttachmentName] = React.useState<string | null>(null);
   const { toast } = useToast(); // Use toast for validation errors
 
   const imageInputRef = React.useRef<HTMLInputElement>(null);
-  const attachmentInputRef = React.useRef<HTMLInputElement>(null);
+  // Removed attachmentInputRef
   const textareaRef = React.useRef<HTMLTextAreaElement>(null); // Ref for textarea
   const formRef = React.useRef<HTMLFormElement>(null); // Ref for the form element
 
@@ -73,30 +71,14 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
-  // Handle attachment selection
-  const handleAttachmentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-        if (file.size > MAX_FILE_SIZE) {
-            toast({ title: "附件太大", description: `附件大小不能超过 ${MAX_FILE_SIZE / 1024 / 1024}MB。`, variant: "destructive" });
-            return;
-          }
-      setAttachmentFile(file);
-      setAttachmentName(file.name);
-    }
-     // Reset input value to allow selecting the same file again
-     if (attachmentInputRef.current) attachmentInputRef.current.value = "";
-  };
+  // Removed handleAttachmentChange function
 
   const clearImage = () => {
     setImageFile(null);
     setImagePreviewUrl(null);
   };
 
-  const clearAttachment = () => {
-    setAttachmentFile(null);
-    setAttachmentName(null);
-  };
+  // Removed clearAttachment function
 
   // Auto-resize textarea height based on content
   React.useEffect(() => {
@@ -113,41 +95,39 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     const trimmedDescription = description.trim();
     if (!trimmedDescription) {
         // Do not show toast, just prevent submission silently or give subtle feedback
-        // toast({ title: "内容不能为空", description: "请输入事件内容。", variant: "destructive" });
         return; // Prevent submission if input is empty
     }
 
     let imageUrl: string | undefined = undefined;
-    let attachmentData: TimelineEvent['attachment'] | undefined = undefined;
+    // Removed attachmentData variable
 
     // Process image if present
     if (imageFile) {
         imageUrl = imagePreviewUrl ?? undefined; // Use preview generated earlier
     }
 
-    // Process attachment if present
-    if (attachmentFile) {
-        attachmentData = { name: attachmentFile.name };
-    }
+    // Removed attachment processing
 
     onAddEvent({
       eventType,
       description: trimmedDescription,
       imageUrl,
-      attachment: attachmentData,
+      // Removed attachment property
     });
 
     // Reset form after submission
     setDescription("");
     setEventType('note'); // Reset to default type
     clearImage();
-    clearAttachment();
+    // Removed clearAttachment call
     // Reset textarea height
     if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
         textareaRef.current.focus(); // Optionally refocus textarea
     }
-  }, [description, eventType, imageFile, attachmentFile, imagePreviewUrl, onAddEvent, toast]); // Include all dependencies
+    // No need to show toast on successful add anymore
+    // toast({ title: "事件已添加" });
+  }, [description, eventType, imageFile, imagePreviewUrl, onAddEvent, toast]); // Removed attachmentFile dependency
 
 
    // Handle Ctrl+Enter / Cmd+Enter submission
@@ -180,9 +160,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
               rows={1} // Start with 1 row, will auto-expand
             />
 
-            {/* REMOVED Separator */}
-
-            {/* Previews and Attachment Name */}
+            {/* Previews */}
             <div className="flex items-center gap-2 flex-wrap">
                  {/* Image Preview */}
                 {imagePreviewUrl && (
@@ -207,23 +185,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                 </div>
                 )}
 
-                {/* Attachment Name Display */}
-                {attachmentName && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary p-1.5 rounded-md max-w-[calc(100%-5rem)]"> {/* Limit width */}
-                    <Paperclip className="h-3 w-3 flex-shrink-0" />
-                    <span className="flex-1 truncate font-medium text-foreground">{attachmentName}</span>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 text-muted-foreground hover:text-destructive flex-shrink-0 p-0.5"
-                        onClick={clearAttachment}
-                        aria-label="清除附件"
-                    >
-                        <XCircle className="h-3 w-3" />
-                    </Button>
-                </div>
-                )}
+                {/* Removed Attachment Name Display */}
             </div>
           </CardContent>
 
@@ -285,30 +247,11 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                         </TooltipContent>
                     </Tooltip>
 
-                    {/* Attachment Upload Trigger */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
-                            onClick={() => attachmentInputRef.current?.click()}
-                            aria-label="添加附件"
-                        >
-                            <Paperclip className="h-4 w-4" /> {/* Smaller icon */}
-                        </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                        <p>添加附件</p>
-                        </TooltipContent>
-                    </Tooltip>
+                    {/* Removed Attachment Upload Trigger */}
                 </div>
 
                  {/* Search Trigger Button - Positioned absolutely in the center */}
-                 {/* <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <SearchTriggerButton /> Place the SearchTriggerButton component here
-                 </div> */}
+                 {/* This is handled in page.tsx */}
 
 
             {/* Submit Button - Use gradient and move to the right */}
@@ -330,13 +273,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
               onChange={handleImageChange}
               className="hidden"
             />
-            <Input
-              ref={attachmentInputRef}
-              type="file"
-            //   accept={ALLOWED_ATTACHMENT_TYPES.join(",")} // Add if needed
-              onChange={handleAttachmentChange}
-              className="hidden"
-            />
+            {/* Removed hidden attachment input */}
           </CardFooter>
         </form>
       </Card>
