@@ -96,24 +96,19 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
         <TooltipProvider> {/* Wrap with TooltipProvider */}
             {/* Reduced bottom padding */}
             <div ref={timelineRef} className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12">
-                {/* Central Timeline Line with Gradient - Dashed Style */}
-                 {/* Use repeating-linear-gradient for dashed effect with gradient */}
+                {/* Central Timeline Line with Dashed Gradient */}
                 <div
                     className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2"
                     style={{
-                        background: `repeating-linear-gradient(
-                            to bottom,
-                            hsl(var(--primary) / 0.8), /* Slightly transparent primary */
-                            hsl(var(--primary) / 0.8) 6px, /* Length of dash */
-                            transparent 6px, /* Start of gap */
-                            transparent 12px /* Length of gap + dash */
-                        ),
-                        linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent))) /* Colorful gradient underneath */
-                        `,
-                        backgroundSize: '1px 100%, 1px 100%', // Ensure gradients cover the line
-                        backgroundRepeat: 'repeat-y, no-repeat',
-                        // Add a slight blur/fade at the bottom if needed
-                        // maskImage: 'linear-gradient(to bottom, black 95%, transparent 100%)',
+                        // Apply the colorful gradient as the background
+                        background: `linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)))`,
+                        // Use a mask to create the dashed effect
+                        WebkitMaskImage: `repeating-linear-gradient(to bottom, black 0, black 6px, transparent 6px, transparent 12px)`,
+                        maskImage: `repeating-linear-gradient(to bottom, black 0, black 6px, transparent 6px, transparent 12px)`,
+                        WebkitMaskSize: `1px 12px`, // Width and height of the repeating pattern (width = line width)
+                        maskSize: `1px 12px`,
+                        WebkitMaskRepeat: 'repeat-y',
+                        maskRepeat: 'repeat-y',
                     }}
                 ></div>
 
