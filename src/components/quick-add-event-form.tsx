@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Send, Paperclip } from "lucide-react"; // Keep Paperclip for now, maybe used elsewhere? -> Removed Paperclip
+import { Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Send } from "lucide-react"; // Removed Paperclip
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
@@ -39,46 +39,63 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
   const [description, setDescription] = React.useState(""); // Use description for the main input
   const [eventType, setEventType] = React.useState<EventType>('note');
   const [imageFile, setImageFile] = React.useState<File | null>(null);
-  // Removed attachmentFile and attachmentName state
   const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(null);
   const { toast } = useToast(); // Use toast for validation errors
 
   const imageInputRef = React.useRef<HTMLInputElement>(null);
-  // Removed attachmentInputRef
   const textareaRef = React.useRef<HTMLTextAreaElement>(null); // Ref for textarea
   const formRef = React.useRef<HTMLFormElement>(null); // Ref for the form element
 
-  // Handle image selection and preview
+  // Function to process and set the image file
+  const processImageFile = (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "图片太大", description: `图片大小不能超过 ${MAX_FILE_SIZE / 1024 / 1024}MB。`, variant: "destructive" });
+      return;
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast({ title: "图片格式不支持", description: "只允许上传 JPG, PNG, WEBP, GIF 格式的图片。", variant: "destructive" });
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle image selection from file input
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        toast({ title: "图片太大", description: `图片大小不能超过 ${MAX_FILE_SIZE / 1024 / 1024}MB。`, variant: "destructive" });
-        return;
-      }
-      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-        toast({ title: "图片格式不支持", description: "只允许上传 JPG, PNG, WEBP, GIF 格式的图片。", variant: "destructive" });
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      processImageFile(file);
     }
     // Reset input value to allow selecting the same file again
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
-  // Removed handleAttachmentChange function
+  // Handle pasting image into textarea
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          event.preventDefault(); // Prevent pasting text representation
+          processImageFile(file);
+          break; // Process only the first image found
+        }
+      }
+    }
+  };
+
 
   const clearImage = () => {
     setImageFile(null);
     setImagePreviewUrl(null);
   };
-
-  // Removed clearAttachment function
 
   // Auto-resize textarea height based on content
   React.useEffect(() => {
@@ -93,41 +110,36 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     if (e) e.preventDefault(); // Prevent default form submission if called from event
 
     const trimmedDescription = description.trim();
-    if (!trimmedDescription) {
-        // Do not show toast, just prevent submission silently or give subtle feedback
-        return; // Prevent submission if input is empty
+    // Allow submission even if description is empty, if there's an image
+    if (!trimmedDescription && !imageFile) {
+        // Prevent submission if both are empty
+        return;
     }
 
     let imageUrl: string | undefined = undefined;
-    // Removed attachmentData variable
 
-    // Process image if present
+    // Process image if present (use preview URL)
     if (imageFile) {
         imageUrl = imagePreviewUrl ?? undefined; // Use preview generated earlier
     }
 
-    // Removed attachment processing
 
     onAddEvent({
       eventType,
-      description: trimmedDescription,
+      description: trimmedDescription, // Can be empty if image exists
       imageUrl,
-      // Removed attachment property
     });
 
     // Reset form after submission
     setDescription("");
     setEventType('note'); // Reset to default type
     clearImage();
-    // Removed clearAttachment call
     // Reset textarea height
     if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
         textareaRef.current.focus(); // Optionally refocus textarea
     }
-    // No need to show toast on successful add anymore
-    // toast({ title: "事件已添加" });
-  }, [description, eventType, imageFile, imagePreviewUrl, onAddEvent, toast]); // Removed attachmentFile dependency
+  }, [description, eventType, imageFile, imagePreviewUrl, onAddEvent]); // Added imageFile to dependencies
 
 
    // Handle Ctrl+Enter / Cmd+Enter submission
@@ -148,10 +160,11 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             {/* Combined Input field for description */}
              <Textarea
               ref={textareaRef} // Add ref
-              placeholder="记录您的想法、任务或日程... (Ctrl+Enter 提交)" // Updated placeholder
+              placeholder="记录您的想法、任务或日程... (Ctrl+Enter 提交，可粘贴图片)" // Updated placeholder
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onKeyDown={handleKeyDown} // Add keydown listener
+              onPaste={handlePaste} // Add paste listener
               className={cn(
                   "w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base p-1 placeholder-muted-foreground/70 overflow-hidden", // Added overflow-hidden
                   "bg-transparent transition-all duration-200 ease-in-out", // Transparent background
@@ -185,7 +198,6 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                 </div>
                 )}
 
-                {/* Removed Attachment Name Display */}
             </div>
           </CardContent>
 
@@ -247,7 +259,6 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                         </TooltipContent>
                     </Tooltip>
 
-                    {/* Removed Attachment Upload Trigger */}
                 </div>
 
                  {/* Search Trigger Button - Positioned absolutely in the center */}
@@ -259,7 +270,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                 type="submit"
                 size="sm"
                 className="h-7 px-3 bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white flex-shrink-0" // Added flex-shrink-0
-                disabled={!description.trim()} // Disable if description is empty
+                disabled={!description.trim() && !imageFile} // Disable if description and image are empty
             >
               <Send className="h-4 w-4 mr-1" /> 添加
             </Button>
@@ -273,7 +284,6 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
               onChange={handleImageChange}
               className="hidden"
             />
-            {/* Removed hidden attachment input */}
           </CardFooter>
         </form>
       </Card>
