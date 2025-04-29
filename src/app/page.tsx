@@ -52,6 +52,7 @@ export default function Home() {
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false); // State for search expansion
   const [newlyAddedEventId, setNewlyAddedEventId] = React.useState<string | null>(null); // State for highlighting new event
   const quickAddFormRef = React.useRef<HTMLDivElement>(null); // Ref for the quick add form container
+  const searchContainerRef = React.useRef<HTMLDivElement>(null); // Ref for the expanded search container
   const [bottomPadding, setBottomPadding] = React.useState(0); // Initial bottom padding, will be calculated
   const { toast } = useToast(); // Initialize toast hook
   const [isAiLoading, setIsAiLoading] = React.useState(false); // State for AI loading
@@ -100,6 +101,34 @@ export default function Home() {
         }
     };
    }, []);
+
+    // Effect to handle clicks outside the expanded search area
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            // Only run if search is expanded and the click is outside the search container
+            if (isSearchExpanded && searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                 // Also check if the click was on the search trigger button itself to prevent immediate closing
+                 const triggerButton = document.getElementById('search-trigger-button'); // Assuming the trigger button has this ID
+                 if (!triggerButton || !triggerButton.contains(event.target as Node)) {
+                    setIsSearchExpanded(false);
+                    // Reset filters when closing by clicking outside
+                    setSearchTerm('');
+                    setSelectedEventType('all');
+                    setSelectedDateFilter('all');
+                 }
+            }
+        };
+
+        // Add listener only when search is expanded
+        if (isSearchExpanded) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        // Cleanup listener
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isSearchExpanded]); // Depend only on isSearchExpanded
 
 
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
@@ -241,6 +270,14 @@ export default function Home() {
         }
     };
 
+    // Function to close search and reset filters
+    const closeAndResetSearch = () => {
+        setIsSearchExpanded(false);
+        setSearchTerm('');
+        setSelectedEventType('all');
+        setSelectedDateFilter('all');
+    };
+
 
   // Render only on the client to avoid hydration issues with Date formatting and initial load
   if (!isClient) {
@@ -264,7 +301,7 @@ export default function Home() {
       {/* Main Content Area - Adjust bottom padding dynamically */}
        <div
           className="container mx-auto px-4 w-full max-w-4xl flex-1" // Use flex-1 to take available space
-          style={{ paddingBottom: `${bottomPadding}px` }} // Apply dynamic padding
+          style={{ paddingBottom: `${bottomPadding + 40}px` }} // Apply dynamic padding + extra space for search trigger
        >
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
@@ -312,11 +349,12 @@ export default function Home() {
            <div className="w-full relative"> {/* Make this relative for absolute positioning of search */}
               <QuickAddEventForm onAddEvent={handleAddEvent} />
                 {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely INSIDE the quick add form's relative parent */}
-                <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, mb-2 for spacing */}
+                 <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-[-10px] pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, adjusted positioning */}
                     <AnimatePresence mode="wait">
                     {isSearchExpanded ? (
                         <motion.div
                             key="search-bar"
+                            ref={searchContainerRef} // Add ref to the expanded container
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -358,7 +396,7 @@ export default function Home() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
-                                onClick={() => setIsSearchExpanded(false)}
+                                onClick={closeAndResetSearch} // Use the new function
                                 aria-label="关闭搜索"
                             >
                                 <X className="h-4 w-4" />
@@ -371,9 +409,10 @@ export default function Home() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
                             transition={{ duration: 0.15, ease: 'easeOut' }}
-                            className="relative z-10 mb-[-10px]" // Adjusted positioning closer to form
+                             className="relative z-10 mb-[-10px]" // Adjusted positioning closer to form
                         >
-                            <Button
+                             <Button
+                                id="search-trigger-button" // Add ID for click outside check
                                 variant="ghost"
                                 size="icon"
                                 className={cn(
@@ -415,6 +454,3 @@ export default function Home() {
     </main>
   );
 }
-
-
-    
