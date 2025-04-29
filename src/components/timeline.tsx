@@ -96,13 +96,17 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
         <TooltipProvider> {/* Wrap with TooltipProvider */}
             {/* Reduced bottom padding */}
             <div ref={timelineRef} className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12">
-                {/* Central Timeline Line with Solid Gradient */}
+                 {/* Central Timeline Line - Dashed Colorful Gradient */}
                 <div
                     className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2"
                     style={{
-                        // Apply the colorful gradient as the background
-                        background: `linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)))`,
-                        // Removed mask properties for solid line
+                    // Define the colorful gradient
+                    backgroundImage: `linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)))`,
+                    // Use a mask to create the dashed effect
+                    maskImage: `repeating-linear-gradient(to bottom, black 0, black 8px, transparent 8px, transparent 16px)`, // 8px dash, 8px gap
+                    maskSize: '1px 16px', // Control width and pattern repeat size
+                    maskRepeat: 'repeat-y',
+                    maskPosition: 'center',
                     }}
                 ></div>
 
@@ -320,4 +324,3 @@ const getEventTypeLabel = (eventType: EventType): string => {
     default: return '事件';
   }
 };
-
