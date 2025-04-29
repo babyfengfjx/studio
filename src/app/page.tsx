@@ -163,11 +163,12 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
-      {/* Main Content Area - Reduced bottom padding */}
-      <div className="container mx-auto px-4 w-full max-w-4xl pb-[160px]"> {/* Reduced bottom padding */}
+      {/* Main Content Area - Adjust bottom padding dynamically based on search state? Maybe fixed padding is simpler. */}
+      {/* Let's use a fixed bottom padding that is large enough for both states */}
+      <div className="container mx-auto px-4 w-full max-w-4xl pb-[140px]"> {/* Adjust bottom padding */}
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
-        {/* Timeline Section - No top margin, adjusted bottom padding handled by parent */}
+        {/* Timeline Section */}
         <div className="mt-0">
              <Timeline
               events={filteredEvents} // Pass filtered events
@@ -178,17 +179,16 @@ export default function Home() {
       </div>
 
        {/* Quick Add Event Form & Search - Fixed at the bottom */}
-       {/* Container for both quick add and search, using Card for background */}
-       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 border-t border-border/30 shadow-lg pointer-events-none">
-         <div className="container mx-auto max-w-4xl flex flex-col items-center gap-2 pointer-events-auto"> {/* Stack items vertically */}
+       {/* Container for both quick add and search, using relative positioning */}
+       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pointer-events-none">
+         <div className="container mx-auto max-w-4xl relative pointer-events-auto"> {/* Removed flex, added relative */}
            {/* Quick Add Form takes full space */}
            <div className="w-full">
              <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
 
-            {/* Search Trigger / Expanded Search Bar Area - Positioned below quick add */}
-             <div className="z-30 w-full max-w-md flex justify-center items-center h-12"> {/* Adjusted height */}
-                {/* REMOVED Timeline Connector Line */}
+            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely */}
+             <div className="absolute z-30 bottom-2 left-1/2 -translate-x-1/2 pointer-events-auto"> {/* Centered horizontally, bottom padding */}
                 <AnimatePresence mode="wait">
                 {isSearchExpanded ? (
                     <motion.div
@@ -198,7 +198,7 @@ export default function Home() {
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: 'easeInOut' }}
                     className={cn(
-                        "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md",
+                        "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md", // Keep max width for expanded state
                         // Apply gradient background to expanded search bar
                         "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
                         )}
@@ -220,28 +220,27 @@ export default function Home() {
                         </Button>
                     </motion.div>
                 ) : (
-                    <motion.div
-                    key="search-trigger"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="relative" // Needed for absolute connector positioning
-                    >
-
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "rounded-full backdrop-blur-sm shadow border border-border h-10 w-10", // Explicit size
-                            // Apply gradient background to search trigger button
-                            "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white" // Gradient background and text color
-                        )}
-                        onClick={() => setIsSearchExpanded(true)}
-                        aria-label="打开搜索与筛选"
-                    >
-                        <Search className="h-5 w-5" />
-                    </Button>
+                     <motion.div
+                        key="search-trigger"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        // No extra class needed for positioning here
+                        >
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "rounded-full backdrop-blur-sm shadow border border-border h-10 w-10", // Explicit size
+                                // Apply gradient background to search trigger button
+                                "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white"
+                            )}
+                            onClick={() => setIsSearchExpanded(true)}
+                            aria-label="打开搜索与筛选"
+                        >
+                            <Search className="h-5 w-5" />
+                        </Button>
                     </motion.div>
                 )}
                 </AnimatePresence>
@@ -260,3 +259,5 @@ export default function Home() {
     </main>
   );
 }
+
+    
