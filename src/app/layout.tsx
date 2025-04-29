@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Using Inter as a clean sans-serif font
 import './globals.css';
@@ -16,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // Set language to Chinese
+    // Set language to Chinese - REMOVED extra whitespace
     <html lang="zh-CN">
       {/* Apply the font variable to the body */}
       <body className={`${inter.variable} font-sans antialiased`}>

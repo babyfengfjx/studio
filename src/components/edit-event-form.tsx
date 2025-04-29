@@ -52,7 +52,7 @@ const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
 // Check if running in the browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Function to derive title from description (e.g., first line or first 30 chars)
+// Function to derive title from description (e.g., first line or first 50 chars)
 const deriveTitle = (description?: string): string => {
     if (!description) return '新事件'; // Default title if no description
     const lines = description.split('\n');
@@ -338,9 +338,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                             <FormLabel>事件类型</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value} /* Controlled component */ >
                                 <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="选择事件类型..." />
-                                </SelectTrigger>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="选择事件类型..." />
+                                    </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                 <SelectItem value="note">
@@ -375,24 +375,25 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                         name="image"
                         render={({ field: { onChange, onBlur, name, ref } }) => (
                             <FormItem className="mt-4">
-                            <FormLabel className="flex items-center gap-2">
-                                <ImageIcon className="h-4 w-4" /> {initialImageUrl ? "替换图片" : "上传图片"} (可选, 最多 5MB)
+                                <FormLabel className="flex items-center gap-2">
+                                    <ImageIcon className="h-4 w-4" /> {initialImageUrl ? "替换图片" : "上传图片"} (可选, 最多 5MB)
                                 </FormLabel>
-                            <FormControl>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        type="file"
-                                        accept={ALLOWED_IMAGE_TYPES.join(",")}
-                                        onChange={(e) => {
-                                             onChange(e.target.files);
-                                             setClearExistingImage(false); // Selecting new file cancels clear intent
-                                        }}
-                                        onBlur={onBlur}
-                                        name={name}
-                                        ref={ref}
-                                        className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                                    />
-                                    {/* Clear Image Button - Show if a NEW file is staged OR an initial image exists and isn't marked for clearing */}
+                                <div className="flex items-center gap-2"> {/* Wrap Input and Button */}
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            accept={ALLOWED_IMAGE_TYPES.join(",")}
+                                            onChange={(e) => {
+                                                onChange(e.target.files);
+                                                setClearExistingImage(false); // Selecting new file cancels clear intent
+                                            }}
+                                            onBlur={onBlur}
+                                            name={name}
+                                            ref={ref}
+                                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                                        />
+                                    </FormControl>
+                                    {/* Clear Image Button */}
                                     {(form.getValues("image") || (initialImageUrl && !clearExistingImage)) && (
                                         <Button
                                             type="button"
@@ -406,14 +407,12 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                                         </Button>
                                     )}
                                 </div>
-                            </FormControl>
-                            <FormDescription>
-                                {initialImageUrl && !form.getValues("image") && !clearExistingImage ? `当前图片: ${initialImageUrl.substring(0,30)}...` : ""} {/* Show initial image info */}
-                                {initialImageUrl && clearExistingImage ? "当前图片将被移除。" : ""}
-                                {form.getValues("image") ? "已选择新图片。" : ""}
-                                {/* Choose a new image to replace the existing one. Click clear to remove it. */}
-                            </FormDescription>
-                            <FormMessage />
+                                <FormDescription>
+                                    {initialImageUrl && !form.getValues("image") && !clearExistingImage ? `当前图片: ${initialImageUrl.substring(0,30)}...` : ""}
+                                    {initialImageUrl && clearExistingImage ? "当前图片将被移除。" : ""}
+                                    {form.getValues("image") ? "已选择新图片。" : ""}
+                                </FormDescription>
+                                <FormMessage />
                             </FormItem>
                         )}
                         />
@@ -428,23 +427,24 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                         name="attachment"
                         render={({ field: { onChange, onBlur, name, ref } }) => (
                             <FormItem className="mt-4">
-                            <FormLabel className="flex items-center gap-2">
-                                <Paperclip className="h-4 w-4" /> {initialAttachmentName ? "替换附件" : "添加附件"} (可选, 最多 5MB)
-                            </FormLabel>
-                            <FormControl>
-                                <div className="flex items-center gap-2">
-                                <Input
-                                        type="file"
-                                        onChange={(e) => {
-                                            onChange(e.target.files);
-                                            // setClearExistingAttachment(false); // Handled by useEffect now
-                                        }}
-                                        onBlur={onBlur}
-                                        name={name}
-                                        ref={ref}
-                                        className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
-                                    />
-                                    {/* Clear Attachment Button - Show if NEW file staged OR initial exists and not marked for clearing */}
+                                <FormLabel className="flex items-center gap-2">
+                                    <Paperclip className="h-4 w-4" /> {initialAttachmentName ? "替换附件" : "添加附件"} (可选, 最多 5MB)
+                                </FormLabel>
+                                <div className="flex items-center gap-2"> {/* Wrap Input and Button */}
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            onChange={(e) => {
+                                                onChange(e.target.files);
+                                                // setClearExistingAttachment(false); // Handled by useEffect now
+                                            }}
+                                            onBlur={onBlur}
+                                            name={name}
+                                            ref={ref}
+                                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
+                                        />
+                                    </FormControl>
+                                    {/* Clear Attachment Button */}
                                     {(form.getValues("attachment") || (initialAttachmentName && !clearExistingAttachment)) && (
                                         <Button
                                             type="button"
@@ -458,14 +458,12 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                                         </Button>
                                     )}
                                 </div>
-                            </FormControl>
-                             <FormDescription>
-                                {attachmentName && !form.getValues("attachment") && !clearExistingAttachment ? `当前附件: ${attachmentName}` : ""}
-                                {initialAttachmentName && clearExistingAttachment ? "当前附件将被移除。" : ""}
-                                {form.getValues("attachment") && attachmentName ? `已选择新附件: ${attachmentName}` : ""}
-                                {/* Choose a new attachment to replace the existing one. Click clear to remove it. */}
-                             </FormDescription>
-                            <FormMessage />
+                                <FormDescription>
+                                    {attachmentName && !form.getValues("attachment") && !clearExistingAttachment ? `当前附件: ${attachmentName}` : ""}
+                                    {initialAttachmentName && clearExistingAttachment ? "当前附件将被移除。" : ""}
+                                    {form.getValues("attachment") && attachmentName ? `已选择新附件: ${attachmentName}` : ""}
+                                </FormDescription>
+                                <FormMessage />
                             </FormItem>
                         )}
                         />

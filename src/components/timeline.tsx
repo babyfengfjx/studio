@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Edit, Trash2, CalendarCheck, Paperclip, Image as ImageIcon, StickyNote, CheckSquare } from 'lucide-react'; // Added more icons
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale'; // Import Chinese locale
 import Image from 'next/image'; // Import next/image
 
@@ -50,6 +50,23 @@ const getEventTypeIcon = (eventType: EventType) => {
   }
 };
 
+// New component to handle client-side date formatting
+const FormattedTimestamp: React.FC<{ timestamp: Date }> = ({ timestamp }) => {
+    const [formattedDate, setFormattedDate] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        // Format the date only on the client side after mount
+        setFormattedDate(format(timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN }));
+    }, [timestamp]); // Re-run if timestamp changes
+
+    if (!formattedDate) {
+        // Render loading state or placeholder initially and on server
+        return <span className="opacity-50">加载中...</span>;
+    }
+
+    return <>{formattedDate}</>;
+};
+
 
 export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) {
   // State to manage which event is pending deletion for confirmation
@@ -57,12 +74,6 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
   // State for image preview dialog
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = React.useState<string | null>(null);
-   // State to track client-side rendering for date formatting
-  const [isClient, setIsClient] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // Handler to open image dialog
   const handleImageClick = (imageUrl: string) => {
@@ -86,10 +97,6 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                     // If index is even, card is on the right, timestamp on the left.
                     // If index is odd, card is on the left, timestamp on the right.
                     const isCardRightAligned = index % 2 === 0;
-
-                    // Format date - only on client
-                    const formattedDate = isClient ? format(event.timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN }) : '';
-
 
                     return (
                         <motion.div
@@ -122,8 +129,8 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                                 "inline-block text-sm text-muted-foreground px-2 py-1 rounded-md bg-background/50 backdrop-blur-sm shadow-sm border", // Add subtle background and border
                                 // No specific self-alignment needed as parent controls horizontal alignment
                             )}>
-                                {/* Format date using Chinese locale and 24-hour format */}
-                                {formattedDate || <span className="opacity-50">加载中...</span>}
+                                {/* Use the client-side formatting component */}
+                                <FormattedTimestamp timestamp={event.timestamp} />
                             </div>
                             </div>
 
