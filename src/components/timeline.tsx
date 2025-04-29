@@ -154,8 +154,9 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                 "w-1/2", // Takes up half the width
                                 isCardRightAligned ? 'pr-8 text-right' : 'pl-8 text-left' // Padding away from center line, text aligned to outside
                             )}>
+                            {/* Enhanced Timestamp Display */}
                             <div className={cn(
-                                "inline-block text-sm text-muted-foreground px-2 py-1 rounded-md bg-background/50 backdrop-blur-sm shadow-sm border", // Add subtle background and border
+                                "inline-block text-base font-semibold text-foreground px-3 py-1.5 rounded-lg bg-background/60 backdrop-blur-md shadow-md border border-border/50", // Increased font size, padding, bolder text, slightly stronger background/shadow
                             )}>
                                 {/* Use the client-side formatting component */}
                                 <FormattedTimestamp timestamp={event.timestamp} />
@@ -324,3 +325,4 @@ const getEventTypeLabel = (eventType: EventType): string => {
     default: return '事件';
   }
 };
+
