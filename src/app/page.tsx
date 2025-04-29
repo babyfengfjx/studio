@@ -25,6 +25,9 @@ import type { TimelineEventInput } from '@/ai/schemas/event-schema'; // Import A
 import { getDateRange } from '@/lib/date-utils'; // Import date range calculation function
 
 
+// Key for LocalStorage
+const LOCAL_STORAGE_KEY = 'timeflow-events';
+
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
   return [...events].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -40,6 +43,9 @@ const getEventTypeLabel = (eventType?: EventType): string => {
     default: return '事件';
   }
 };
+
+// Type for data stored in localStorage (with string dates)
+type StoredTimelineEvent = Omit<TimelineEvent, 'timestamp'> & { timestamp: string };
 
 export default function Home() {
   const [allEvents, setAllEvents] = React.useState<TimelineEvent[]>([]); // Store all events
@@ -59,13 +65,55 @@ export default function Home() {
   const [viewMode, setViewMode] = React.useState<ViewMode>('timeline'); // State for view mode
   const [isWebdavSettingsOpen, setIsWebdavSettingsOpen] = React.useState(false); // State for WebDAV settings dialog
 
-   // Set isClient to true only on the client side and load initial data
+  // Load events from LocalStorage on initial client-side mount
   React.useEffect(() => {
     setIsClient(true);
-    // Load initial data (e.g., from local storage, WebDAV, or start with mock)
-    // TODO: Implement actual data loading/saving strategy (e.g., WebDAV sync)
-    setAllEvents(sortEventsDescending(mockEvents));
-  }, []);
+    try {
+      const storedEvents = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (storedEvents) {
+        const parsedEvents: StoredTimelineEvent[] = JSON.parse(storedEvents);
+        // Convert ISO string timestamps back to Date objects
+        const eventsWithDates = parsedEvents.map(event => ({
+          ...event,
+          timestamp: new Date(event.timestamp),
+        }));
+        setAllEvents(sortEventsDescending(eventsWithDates));
+      } else {
+        // Optional: Initialize with mock events if nothing in storage
+         // Or initialize with empty: setAllEvents([]);
+         // Let's keep mock events for first-time users for now
+         setAllEvents(sortEventsDescending(mockEvents));
+      }
+    } catch (error) {
+      console.error("Error loading events from localStorage:", error);
+      // Fallback to mock events or empty array in case of error
+      setAllEvents(sortEventsDescending(mockEvents));
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+
+  // Save events to LocalStorage whenever allEvents state changes
+  React.useEffect(() => {
+    // Only save if it's client-side and allEvents has been initialized
+    if (isClient && allEvents.length > 0) {
+        try {
+        // Convert Date objects to ISO strings for serialization
+        const eventsToStore: StoredTimelineEvent[] = allEvents.map(event => ({
+            ...event,
+            timestamp: event.timestamp.toISOString(),
+        }));
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(eventsToStore));
+        } catch (error) {
+            console.error("Error saving events to localStorage:", error);
+            // Optionally notify user about the saving issue
+            // toast({ title: "保存失败", description: "无法将更改保存到本地存储。", variant: "destructive" });
+        }
+    }
+    // If allEvents becomes empty after initialization, clear localStorage
+    else if (isClient && allEvents.length === 0 && localStorage.getItem(LOCAL_STORAGE_KEY)) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+    }
+  }, [allEvents, isClient]); // Run whenever allEvents or isClient changes
 
    // Calculate bottom padding based on quick add form height
    React.useEffect(() => {
@@ -80,27 +128,28 @@ export default function Home() {
         }
     };
 
-    // Initial calculation
-    calculatePadding();
+    // Initial calculation only after client side is confirmed
+    if(isClient) {
+        calculatePadding();
+        // Recalculate on window resize
+        window.addEventListener('resize', calculatePadding);
 
-    // Recalculate on window resize
-    window.addEventListener('resize', calculatePadding);
-
-    // Use ResizeObserver for more precise form height changes (optional but better)
-    let resizeObserver: ResizeObserver | null = null;
-    if (quickAddFormRef.current) {
-        resizeObserver = new ResizeObserver(calculatePadding);
-        resizeObserver.observe(quickAddFormRef.current);
-    }
-
-    // Cleanup listeners
-    return () => {
-        window.removeEventListener('resize', calculatePadding);
-        if (resizeObserver && quickAddFormRef.current) {
-            resizeObserver.unobserve(quickAddFormRef.current);
+        // Use ResizeObserver for more precise form height changes (optional but better)
+        let resizeObserver: ResizeObserver | null = null;
+        if (quickAddFormRef.current) {
+            resizeObserver = new ResizeObserver(calculatePadding);
+            resizeObserver.observe(quickAddFormRef.current);
         }
-    };
-   }, []);
+
+        // Cleanup listeners
+        return () => {
+            window.removeEventListener('resize', calculatePadding);
+            if (resizeObserver && quickAddFormRef.current) {
+                resizeObserver.unobserve(quickAddFormRef.current);
+            }
+        };
+    }
+   }, [isClient]); // Re-run if isClient changes
 
     // Function to close search and reset filters (Wrap in useCallback)
     const closeAndResetSearch = React.useCallback(() => {
@@ -155,14 +204,14 @@ export default function Home() {
 
 
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
-     // TODO: Save to chosen data store (e.g., local state, trigger WebDAV save)
+     // This function now only updates the state. Saving is handled by the useEffect hook.
      console.log("Adding event");
 
     const newEvent: TimelineEvent = {
-      id: crypto.randomUUID(), // Generate a unique ID (replace with DB ID if saving)
+      id: crypto.randomUUID(), // Generate a unique ID
       timestamp: new Date(), // Set timestamp to current time
-      title: '', // Title is intentionally left empty, derived dynamically elsewhere
-      description: newEventData.description, // Full description
+      title: '', // Title is intentionally left empty
+      description: newEventData.description,
       eventType: newEventData.eventType,
       imageUrl: newEventData.imageUrl,
     };
@@ -174,9 +223,8 @@ export default function Home() {
              if (viewMode === 'timeline') {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
              }
-             // Optionally scroll to top in list view as well
              else if (viewMode === 'list') {
-                const listContainer = document.getElementById('event-list-container'); // Assuming list has an ID
+                const listContainer = document.getElementById('event-list-container');
                 if (listContainer) listContainer.scrollTo({ top: 0, behavior: 'smooth' });
              }
         });
@@ -189,10 +237,10 @@ export default function Home() {
   };
 
   const handleDeleteEvent = (id: string) => {
-    // TODO: Implement deletion from chosen data store
+    // This function now only updates the state. Saving is handled by the useEffect hook.
     console.log("Deleting event:", id);
     const eventToDelete = allEvents.find(e => e.id === id);
-    // Filter out the event and resort (though filtering doesn't change order)
+    // Filter out the event
     setAllEvents((prevEvents) => sortEventsDescending(prevEvents.filter((event) => event.id !== id)));
   };
 
@@ -204,7 +252,7 @@ export default function Home() {
 
   // Updated handleEditEvent to accept timestamp
   const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'title'>>) => {
-     // TODO: Implement update in chosen data store
+     // This function now only updates the state. Saving is handled by the useEffect hook.
      console.log("Editing event:", id);
 
      const originalEvent = allEvents.find(e => e.id === id);
@@ -472,4 +520,5 @@ export default function Home() {
     </main>
   );
 }
+
 
