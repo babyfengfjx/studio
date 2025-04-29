@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { LogIn, LogOut, UserPlus, Loader2, AlertCircle } from 'lucide-react'; // Import AlertCircle
 import { useAuth } from '@/context/auth-context';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Import buttonVariants
 import {
     Dialog,
     DialogContent,
@@ -73,6 +73,13 @@ const getFirebaseErrorMessage = (error: AuthError): { title: string; message: st
              message = 'Firebase 配置无效或不完整。请执行以下步骤：\n1. 检查项目根目录下的 `.env.local` 文件。\n2. 确保包含正确的 Firebase 配置 (NEXT_PUBLIC_FIREBASE_API_KEY 等)。\n3. **修改 `.env.local` 文件后，必须重启开发服务器 (例如，停止并重新运行 `npm run dev`)。**'; // More detailed instructions
              isConfigError = true;
              break;
+        // Handle the specific error code from the screenshot
+        case 'auth/api-key-not-valid.-please-pass-a-valid-api-key.':
+            console.error("Firebase API Key Error:", error);
+            title = 'Firebase 配置错误';
+            message = 'Firebase API Key 无效。请执行以下步骤：\n1. 检查项目根目录下的 `.env.local` 文件。\n2. 确保 NEXT_PUBLIC_FIREBASE_API_KEY 的值正确无误。\n3. **修改 `.env.local` 文件后，必须重启开发服务器。**';
+            isConfigError = true;
+            break;
         default:
             console.error('Unhandled Firebase Auth Error:', error); // Log unexpected errors
             // Keep the generic message but provide the code
@@ -247,9 +254,10 @@ export function AuthControls() {
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button type="button" variant="outline" disabled={isAuthLoading}>取消</Button> {/* Cancel */}
-                                        </DialogClose>
+                                         {/* Correct usage of DialogClose with asChild */}
+                                         <DialogClose asChild>
+                                            <Button type="button" variant="outline" disabled={isAuthLoading}>取消</Button>
+                                         </DialogClose>
                                         <Button type="submit" disabled={isAuthLoading}>
                                             {isAuthLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             登录 {/* Login */}
@@ -309,8 +317,9 @@ export function AuthControls() {
                                         </div>
                                     </div>
                                     <DialogFooter>
+                                         {/* Correct usage of DialogClose with asChild */}
                                         <DialogClose asChild>
-                                            <Button type="button" variant="outline" disabled={isAuthLoading}>取消</Button> {/* Cancel */}
+                                            <Button type="button" variant="outline" disabled={isAuthLoading}>取消</Button>
                                         </DialogClose>
                                         <Button type="submit" disabled={isAuthLoading}>
                                             {isAuthLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
