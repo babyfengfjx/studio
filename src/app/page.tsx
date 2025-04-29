@@ -176,7 +176,8 @@ export default function Home() {
       </div>
 
       {/* Search Trigger / Expanded Search Bar Area - Positioned above the quick add form */}
-       <div className="fixed bottom-[160px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16"> {/* Adjusted bottom position UPWARDS */}
+       {/* Adjusted bottom position DOWNWARDS slightly closer to the form */}
+       <div className="fixed bottom-[150px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16">
          {/* Timeline Connector Line (Visible when search is NOT expanded) */}
          {!isSearchExpanded && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full mb-[-4px]"></div> /* Adjusted height and margin */
@@ -241,13 +242,13 @@ export default function Home() {
 
 
        {/* Quick Add Event Form - Fixed at the bottom */}
-       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/90 backdrop-blur-md border-t border-border shadow-lg">
-         <div className="container mx-auto max-w-4xl flex items-end gap-2"> {/* Use flex to align items */}
+       {/* Removed background/blur from container, Card component handles background */}
+       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 border-t border-border/30 shadow-lg pointer-events-none">
+         <div className="container mx-auto max-w-4xl flex items-end gap-2 pointer-events-auto"> {/* Make children interactive */}
            {/* Quick Add Form takes full space */}
            <div className="flex-grow">
              <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
-            {/* REMOVED Search/Filter Trigger Button from here */}
          </div>
        </div>
 
@@ -262,6 +263,3 @@ export default function Home() {
     </main>
   );
 }
-
-
-    

@@ -158,7 +158,8 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
   return (
     <TooltipProvider>
       {/* Use Card for better structure and styling in fixed position */}
-      <Card className="shadow-md overflow-hidden border-0 rounded-lg bg-gradient-to-r from-background to-muted/50">
+      {/* Apply gradient background */}
+      <Card className="shadow-md overflow-hidden border-0 rounded-lg bg-gradient-to-br from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800">
         <form onSubmit={handleSubmit}>
           <CardContent className="p-3 space-y-2 pb-1"> {/* Adjusted bottom padding */}
             {/* Combined Input field for description */}
@@ -299,7 +300,13 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" size="sm" className="h-7 px-3" disabled={!description.trim()}> {/* Disable if description is empty */}
+            {/* Use gradient on submit button */}
+            <Button
+                type="submit"
+                size="sm"
+                className="h-7 px-3 bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white"
+                disabled={!description.trim()} // Disable if description is empty
+            >
               <Send className="h-4 w-4 mr-1" /> 添加
             </Button>
 
