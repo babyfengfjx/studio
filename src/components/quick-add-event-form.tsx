@@ -223,84 +223,86 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             </div>
           </CardContent>
 
+          {/* Card Footer now only contains the submit button */}
           <CardFooter className="bg-muted/30 p-2 flex items-center justify-between gap-1 border-t border-border/20">
-            <div className="flex items-center gap-0.5"> {/* Reduced gap */}
-               {/* Event Type Select */}
-                <Select value={eventType} onValueChange={(value) => setEventType(value as EventType)}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <SelectTrigger className="w-auto h-7 px-1.5 border-0 bg-transparent shadow-none focus:ring-0 text-muted-foreground hover:text-foreground"> {/* Smaller trigger, hover effect */}
-                                <SelectValue>
-                                {eventType === 'note' && <StickyNote className="h-4 w-4" />}
-                                {eventType === 'todo' && <CheckSquare className="h-4 w-4" />}
-                                {eventType === 'schedule' && <CalendarCheck className="h-4 w-4" />}
-                                </SelectValue>
-                            </SelectTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>选择事件类型</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <SelectContent>
-                        <SelectItem value="note">
-                            <div className="flex items-center gap-2">
-                                <StickyNote className="h-4 w-4" /> 笔记
-                            </div>
-                        </SelectItem>
-                        <SelectItem value="todo">
-                            <div className="flex items-center gap-2">
-                                <CheckSquare className="h-4 w-4" /> 待办
-                            </div>
-                        </SelectItem>
-                        <SelectItem value="schedule">
-                            <div className="flex items-center gap-2">
-                                <CalendarCheck className="h-4 w-4" /> 日程
-                            </div>
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
+                <div className="flex items-center gap-0.5"> {/* Reduced gap */}
+                    {/* Event Type Select */}
+                    <Select value={eventType} onValueChange={(value) => setEventType(value as EventType)}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <SelectTrigger className="w-auto h-7 px-1.5 border-0 bg-transparent shadow-none focus:ring-0 text-muted-foreground hover:text-foreground"> {/* Smaller trigger, hover effect */}
+                                    <SelectValue>
+                                    {eventType === 'note' && <StickyNote className="h-4 w-4" />}
+                                    {eventType === 'todo' && <CheckSquare className="h-4 w-4" />}
+                                    {eventType === 'schedule' && <CalendarCheck className="h-4 w-4" />}
+                                    </SelectValue>
+                                </SelectTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>选择事件类型</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        <SelectContent>
+                            <SelectItem value="note">
+                                <div className="flex items-center gap-2">
+                                    <StickyNote className="h-4 w-4" /> 笔记
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="todo">
+                                <div className="flex items-center gap-2">
+                                    <CheckSquare className="h-4 w-4" /> 待办
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="schedule">
+                                <div className="flex items-center gap-2">
+                                    <CalendarCheck className="h-4 w-4" /> 日程
+                                </div>
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
 
-              {/* Image Upload Trigger */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
-                    onClick={() => imageInputRef.current?.click()}
-                    aria-label="添加图片"
-                  >
-                    <ImageIcon className="h-4 w-4" /> {/* Smaller icon */}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>添加图片</p>
-                </TooltipContent>
-              </Tooltip>
+                {/* Image Upload Trigger */}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
+                        onClick={() => imageInputRef.current?.click()}
+                        aria-label="添加图片"
+                    >
+                        <ImageIcon className="h-4 w-4" /> {/* Smaller icon */}
+                    </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                    <p>添加图片</p>
+                    </TooltipContent>
+                </Tooltip>
 
-              {/* Attachment Upload Trigger */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
-                    onClick={() => attachmentInputRef.current?.click()}
-                    aria-label="添加附件"
-                  >
-                    <Paperclip className="h-4 w-4" /> {/* Smaller icon */}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>添加附件</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+                {/* Attachment Upload Trigger */}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
+                        onClick={() => attachmentInputRef.current?.click()}
+                        aria-label="添加附件"
+                    >
+                        <Paperclip className="h-4 w-4" /> {/* Smaller icon */}
+                    </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                    <p>添加附件</p>
+                    </TooltipContent>
+                </Tooltip>
+                </div>
+
 
             {/* Submit Button */}
-            {/* Use gradient on submit button */}
+             {/* Submit Button - Use gradient and move to the right */}
             <Button
                 type="submit"
                 size="sm"
@@ -309,6 +311,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             >
               <Send className="h-4 w-4 mr-1" /> 添加
             </Button>
+
 
             {/* Hidden File Inputs */}
             <Input

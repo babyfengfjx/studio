@@ -86,11 +86,27 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}> {/* Wrap the entire list for Dialog context */}
         <TooltipProvider> {/* Wrap with TooltipProvider */}
             {/* Adjusted bottom padding */}
-             {/* Increased bottom padding to accommodate search bar */}
+             {/* Reduced bottom padding as search bar moved */}
             <div className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12">
-                {/* Central Timeline Line with Gradient */}
-                 {/* Adjusted height (bottom) to end slightly above the search area */}
-                <div className="absolute left-1/2 top-0 bottom-8 w-1 bg-gradient-to-b from-blue-400 via-teal-400 to-purple-400 -translate-x-1/2 rounded-b-full"></div>
+                {/* Central Timeline Line with Gradient - Dashed Style */}
+                 {/* Adjusted height (bottom) to end above the quick add area */}
+                 {/* Use repeating-linear-gradient for dashed effect */}
+                <div
+                    className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2"
+                    style={{
+                        background: `repeating-linear-gradient(
+                            to bottom,
+                            hsl(var(--primary)), /* Start color (e.g., blue) */
+                            hsl(var(--primary)) 6px, /* Length of dash */
+                            transparent 6px, /* Start of gap */
+                            transparent 12px /* Length of gap + dash */
+                        ),
+                        linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent))) /* Fallback solid gradient if needed */
+                        `,
+                        // Add a slight blur/fade at the bottom if needed
+                        // maskImage: 'linear-gradient(to bottom, black 95%, transparent 100%)',
+                    }}
+                ></div>
 
                 <AnimatePresence initial={false}>
                     {events.map((event, index) => {

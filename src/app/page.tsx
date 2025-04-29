@@ -163,8 +163,8 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
-      {/* Main Content Area - Increased bottom padding to accommodate fixed form & search */}
-      <div className="container mx-auto px-4 w-full max-w-4xl pb-[220px]"> {/* Increased bottom padding */}
+      {/* Main Content Area - Reduced bottom padding */}
+      <div className="container mx-auto px-4 w-full max-w-4xl pb-[160px]"> {/* Reduced bottom padding */}
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
         {/* Timeline Section - No top margin, adjusted bottom padding handled by parent */}
@@ -177,80 +177,75 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Search Trigger / Expanded Search Bar Area - Positioned above the quick add form */}
-       {/* Adjusted bottom position DOWNWARDS slightly closer to the form */}
-       <div className="fixed bottom-[140px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16"> {/* Moved slightly lower */}
-         {/* Timeline Connector Line (Visible when search is NOT expanded) */}
-         {!isSearchExpanded && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full mb-[-4px]"></div> /* Adjusted height and margin */
-         )}
-         <AnimatePresence mode="wait">
-           {isSearchExpanded ? (
-             <motion.div
-               key="search-bar"
-               initial={{ opacity: 0, y: 10, scale: 0.95 }}
-               animate={{ opacity: 1, y: 0, scale: 1 }}
-               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-               transition={{ duration: 0.2, ease: 'easeInOut' }}
-               className={cn(
-                   "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md",
-                   // Apply gradient background to expanded search bar
-                   "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
-                )}
-             >
-               <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
-               <FilterControls
-                 selectedType={selectedEventType}
-                 onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
-                 className="w-auto flex-shrink-0" // Adjust styling for inline display
-               />
-                <Button
-                   variant="ghost"
-                   size="icon"
-                   className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
-                   onClick={() => setIsSearchExpanded(false)}
-                   aria-label="关闭搜索"
-                 >
-                   <X className="h-4 w-4" />
-                 </Button>
-             </motion.div>
-           ) : (
-             <motion.div
-               key="search-trigger"
-               initial={{ opacity: 0, scale: 0.8 }}
-               animate={{ opacity: 1, scale: 1 }}
-               exit={{ opacity: 0, scale: 0.8 }}
-               transition={{ duration: 0.15, ease: 'easeOut' }}
-               className="relative" // Needed for absolute connector positioning
-             >
-
-               <Button
-                 variant="ghost"
-                 size="icon"
-                 className={cn(
-                     "rounded-full backdrop-blur-sm shadow border border-border",
-                     // Apply gradient background to search trigger button
-                     "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white" // Gradient background and text color
-                    )}
-                 onClick={() => setIsSearchExpanded(true)}
-                 aria-label="打开搜索与筛选"
-               >
-                 <Search className="h-5 w-5" />
-               </Button>
-             </motion.div>
-           )}
-         </AnimatePresence>
-       </div>
-
-
-       {/* Quick Add Event Form - Fixed at the bottom */}
-       {/* Removed background/blur from container, Card component handles background */}
+       {/* Quick Add Event Form & Search - Fixed at the bottom */}
+       {/* Container for both quick add and search, using Card for background */}
        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 border-t border-border/30 shadow-lg pointer-events-none">
-         <div className="container mx-auto max-w-4xl flex items-end gap-2 pointer-events-auto"> {/* Make children interactive */}
+         <div className="container mx-auto max-w-4xl flex flex-col items-center gap-2 pointer-events-auto"> {/* Stack items vertically */}
            {/* Quick Add Form takes full space */}
-           <div className="flex-grow">
+           <div className="w-full">
              <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
+
+            {/* Search Trigger / Expanded Search Bar Area - Positioned below quick add */}
+             <div className="z-30 w-full max-w-md flex justify-center items-center h-12"> {/* Adjusted height */}
+                {/* REMOVED Timeline Connector Line */}
+                <AnimatePresence mode="wait">
+                {isSearchExpanded ? (
+                    <motion.div
+                    key="search-bar"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md",
+                        // Apply gradient background to expanded search bar
+                        "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
+                        )}
+                    >
+                    <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
+                    <FilterControls
+                        selectedType={selectedEventType}
+                        onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
+                        className="w-auto flex-shrink-0" // Adjust styling for inline display
+                    />
+                        <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
+                        onClick={() => setIsSearchExpanded(false)}
+                        aria-label="关闭搜索"
+                        >
+                        <X className="h-4 w-4" />
+                        </Button>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                    key="search-trigger"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="relative" // Needed for absolute connector positioning
+                    >
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "rounded-full backdrop-blur-sm shadow border border-border h-10 w-10", // Explicit size
+                            // Apply gradient background to search trigger button
+                            "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white" // Gradient background and text color
+                        )}
+                        onClick={() => setIsSearchExpanded(true)}
+                        aria-label="打开搜索与筛选"
+                    >
+                        <Search className="h-5 w-5" />
+                    </Button>
+                    </motion.div>
+                )}
+                </AnimatePresence>
+            </div>
          </div>
        </div>
 
