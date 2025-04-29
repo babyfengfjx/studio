@@ -34,6 +34,7 @@ interface TimelineProps {
   events: TimelineEvent[];
   onEditEvent: (event: TimelineEvent) => void;
   onDeleteEvent: (id: string) => void;
+  newlyAddedEventId?: string | null; // Optional prop for highlighting
 }
 
 // Helper function to get the icon based on event type
@@ -56,6 +57,7 @@ const FormattedTimestamp: React.FC<{ timestamp: Date }> = ({ timestamp }) => {
 
     React.useEffect(() => {
         // Format the date only on the client side after mount
+        // Ensure it's 24-hour format 'HH:mm'
         setFormattedDate(format(timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN }));
     }, [timestamp]); // Re-run if timestamp changes
 
@@ -68,12 +70,13 @@ const FormattedTimestamp: React.FC<{ timestamp: Date }> = ({ timestamp }) => {
 };
 
 
-export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) {
+export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId }: TimelineProps) {
   // State to manage which event is pending deletion for confirmation
   const [eventToDelete, setEventToDelete] = React.useState<TimelineEvent | null>(null);
   // State for image preview dialog
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = React.useState<string | null>(null);
+  const timelineRef = React.useRef<HTMLDivElement>(null); // Ref for the timeline container
 
   // Handler to open image dialog
   const handleImageClick = (imageUrl: string) => {
@@ -81,28 +84,34 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
     setIsImageDialogOpen(true);
   };
 
+  // Highlight animation definition
+  const highlightAnimation = {
+    scale: [1, 1.05, 1], // Briefly scale up and back
+    transition: { duration: 0.8, ease: "easeInOut" }, // Smoother transition
+  };
+
 
   return (
      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}> {/* Wrap the entire list for Dialog context */}
         <TooltipProvider> {/* Wrap with TooltipProvider */}
-            {/* Adjusted bottom padding */}
-             {/* Reduced bottom padding as search bar moved */}
-            <div className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12">
+            {/* Reduced bottom padding */}
+            <div ref={timelineRef} className="relative w-full max-w-4xl mx-auto px-4 pt-8 pb-12">
                 {/* Central Timeline Line with Gradient - Dashed Style */}
-                 {/* Adjusted height (bottom) to end above the quick add area */}
-                 {/* Use repeating-linear-gradient for dashed effect */}
+                 {/* Use repeating-linear-gradient for dashed effect with gradient */}
                 <div
                     className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2"
                     style={{
                         background: `repeating-linear-gradient(
                             to bottom,
-                            hsl(var(--primary)), /* Start color (e.g., blue) */
-                            hsl(var(--primary)) 6px, /* Length of dash */
+                            hsl(var(--primary) / 0.8), /* Slightly transparent primary */
+                            hsl(var(--primary) / 0.8) 6px, /* Length of dash */
                             transparent 6px, /* Start of gap */
                             transparent 12px /* Length of gap + dash */
                         ),
-                        linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent))) /* Fallback solid gradient if needed */
+                        linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent))) /* Colorful gradient underneath */
                         `,
+                        backgroundSize: '1px 100%, 1px 100%', // Ensure gradients cover the line
+                        backgroundRepeat: 'repeat-y, no-repeat',
                         // Add a slight blur/fade at the bottom if needed
                         // maskImage: 'linear-gradient(to bottom, black 95%, transparent 100%)',
                     }}
@@ -113,15 +122,26 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                     // If index is even, card is on the right, timestamp on the left.
                     // If index is odd, card is on the left, timestamp on the right.
                     const isCardRightAligned = index % 2 === 0;
+                    const isNewlyAdded = event.id === newlyAddedEventId;
 
                     return (
                         <motion.div
                             key={event.id}
-                            layout
+                            layout // Enable layout animation
                             initial={{ opacity: 0, y: 50, scale: 0.3 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            animate={{
+                                opacity: 1,
+                                y: 0,
+                                scale: isNewlyAdded ? highlightAnimation.scale : 1, // Apply scale animation if newly added
+                            }}
                             exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                            transition={{
+                                type: 'spring',
+                                stiffness: 500,
+                                damping: 30,
+                                // Apply highlight transition only if newly added
+                                ...(isNewlyAdded ? highlightAnimation.transition : {}),
+                            }}
                             // Main container for the row, using flex to align items
                             className={cn(
                                 "mb-12 flex items-center w-full relative", // Use items-center for vertical alignment
@@ -143,7 +163,6 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                             )}>
                             <div className={cn(
                                 "inline-block text-sm text-muted-foreground px-2 py-1 rounded-md bg-background/50 backdrop-blur-sm shadow-sm border", // Add subtle background and border
-                                // No specific self-alignment needed as parent controls horizontal alignment
                             )}>
                                 {/* Use the client-side formatting component */}
                                 <FormattedTimestamp timestamp={event.timestamp} />
@@ -157,7 +176,6 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                             )}>
                                 <Card className={cn(
                                     "shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10, flex col
-                                    // Text alignment inside the card is always left now, simplicity
                                     'text-left'
                                 )}>
 
@@ -229,7 +247,6 @@ export function Timeline({ events, onEditEvent, onDeleteEvent }: TimelineProps) 
                                     </CardHeader>
 
                                     {/* Card Content (Description and Image) */}
-                                    {/* Use a div to allow flex layout for description and image */}
                                     <CardContent className={cn(
                                         "pt-0 pb-4 flex-grow flex items-center", // Make content a flex container, center items vertically
                                         event.description ? "justify-between" : "justify-end" // Justify between if description exists, else end for just image
