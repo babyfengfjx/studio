@@ -2,17 +2,18 @@
 'use client';
 
 import * as React from 'react';
-import { Search, X, Brain, Loader2, List, Rows, Settings } from 'lucide-react'; // Import view icons, Settings icon
+import { Search, X, Brain, Loader2, List, Rows, Settings, CalendarRange } from 'lucide-react'; // Import view icons, Settings icon, CalendarRange
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timeline } from '@/components/timeline';
 import { EventList } from '@/components/event-list'; // Import EventList component
 import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar';
 import { FilterControls } from '@/components/filter-controls';
+import { DateFilterControls } from '@/components/date-filter-controls'; // Import DateFilterControls
 import { QuickAddEventForm } from '@/components/quick-add-event-form';
 import { WebdavSettings } from '@/components/webdav-settings'; // Import WebdavSettings
 import { mockEvents } from '@/data/mock-events';
-import type { TimelineEvent, EventType, ViewMode } from '@/types/event'; // Add ViewMode type
+import type { TimelineEvent, EventType, ViewMode, DateFilterType } from '@/types/event'; // Add ViewMode, DateFilterType type
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs for view switching
 import { Toaster } from "@/components/ui/toaster";
@@ -21,6 +22,7 @@ import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { summarizeEvents } from '@/ai/flows/summarize-events-flow'; // Import AI flow function
 import type { SummarizeEventsInput } from '@/ai/schemas/summarize-events-schema'; // Import AI input type from new schema file
 import type { TimelineEventInput } from '@/ai/schemas/event-schema'; // Import AI schema type for event mapping
+import { getDateRange } from '@/lib/date-utils'; // Import date range calculation function
 
 
 // Helper function to sort events by timestamp descending (newest first)
@@ -39,22 +41,6 @@ const getEventTypeLabel = (eventType?: EventType): string => {
   }
 };
 
-// Function to derive title from description (e.g., first line or first 50 chars) - Moved to event-list and edit-event-form
-// const deriveTitle = (description?: string): string => {
-//     if (!description) return '新事件'; // Default title if no description
-//     const lines = description.split('\n');
-//     const firstLine = lines[0].trim();
-//     if (firstLine) {
-//         // Use first line or truncate if longer than 50 chars
-//         return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
-//     }
-//     // If first line is empty but there's more content, use a snippet
-//     const snippet = description.trim().substring(0, 50);
-//     // Add ellipsis if snippet was truncated, ensure it's not empty
-//     return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
-// };
-
-
 export default function Home() {
   // Removed user state from useAuth
   const [allEvents, setAllEvents] = React.useState<TimelineEvent[]>([]); // Store all events
@@ -63,6 +49,7 @@ export default function Home() {
   const [isClient, setIsClient] = React.useState(false); // State to track client-side rendering
   const [searchTerm, setSearchTerm] = React.useState(''); // State for search term
   const [selectedEventType, setSelectedEventType] = React.useState<EventType | 'all'>('all'); // State for filter
+  const [selectedDateFilter, setSelectedDateFilter] = React.useState<DateFilterType>('all'); // State for date filter
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false); // State for search expansion
   const [newlyAddedEventId, setNewlyAddedEventId] = React.useState<string | null>(null); // State for highlighting new event
   const quickAddFormRef = React.useRef<HTMLDivElement>(null); // Ref for the quick add form container
@@ -129,7 +116,7 @@ export default function Home() {
       description: newEventData.description, // Full description
       eventType: newEventData.eventType,
       imageUrl: newEventData.imageUrl,
-      attachment: newEventData.attachment,
+      // Removed attachment
     };
     // Add new event and resort descending (newest first)
     setAllEvents((prevEvents) => {
@@ -190,18 +177,27 @@ export default function Home() {
   };
 
 
-  // Filter events based on search term (only description) and selected type
+  // Filter events based on search term, selected type, and selected date range
   const filteredEvents = React.useMemo(() => {
+    const dateRange = getDateRange(selectedDateFilter); // Get { start: Date | null, end: Date | null }
+
     return allEvents.filter(event => {
       // Search only in description now
       const matchesSearch = searchTerm === '' ||
         (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
+      // Filter by event type
       const matchesFilter = selectedEventType === 'all' || event.eventType === selectedEventType;
 
-      return matchesSearch && matchesFilter;
+      // Filter by date range
+      const matchesDate = !dateRange || (
+           (!dateRange.start || event.timestamp >= dateRange.start) &&
+           (!dateRange.end || event.timestamp <= dateRange.end)
+      );
+
+      return matchesSearch && matchesFilter && matchesDate; // Combine all filters
     });
-  }, [allEvents, searchTerm, selectedEventType]);
+  }, [allEvents, searchTerm, selectedEventType, selectedDateFilter]); // Add selectedDateFilter to dependencies
 
     // Function to handle AI summarization
     const handleAiSummarize = async () => {
@@ -219,6 +215,7 @@ export default function Home() {
         const eventsForAi: TimelineEventInput[] = filteredEvents.map(event => ({
             ...event,
             timestamp: event.timestamp.toISOString(), // Convert Date to ISO string
+            // Removed attachment mapping
         }));
 
         setIsAiLoading(true);
@@ -318,7 +315,6 @@ export default function Home() {
          <div className="container mx-auto max-w-4xl relative pointer-events-auto p-4"> {/* Added padding here */}
            {/* Quick Add Form takes full width within the centered container */}
            <div className="w-full">
-               {/* Always show quick add form as there's no user login anymore */}
               <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely ABOVE the quick add form */}
@@ -332,39 +328,46 @@ export default function Home() {
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2, ease: 'easeInOut' }}
                         className={cn(
-                            "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md", // Max width for expanded state
-                            // Apply gradient background to expanded search bar
+                            "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-lg", // Max width for expanded state
                             "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
                         )}
                     >
-                    <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
-                    <FilterControls
-                        selectedType={selectedEventType}
-                        onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
-                        className="w-auto flex-shrink-0" // Adjust styling for inline display
-                    />
-                    {/* AI Summarize Button */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-primary",
-                            isAiLoading && "animate-spin" // Add spin animation when loading
-                        )}
-                        onClick={handleAiSummarize}
-                        disabled={isAiLoading || !searchTerm.trim()} // Disable if loading or no query
-                        aria-label="AI 总结"
-                      >
-                        {isAiLoading ? <Loader2 className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
-                      </Button>
+                        <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
+                        {/* Type Filter */}
+                        <FilterControls
+                            selectedType={selectedEventType}
+                            onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
+                            className="w-auto flex-shrink-0"
+                        />
+                        {/* Date Filter */}
+                        <DateFilterControls
+                            selectedFilter={selectedDateFilter}
+                            onFilterChange={setSelectedDateFilter}
+                            className="w-auto flex-shrink-0"
+                         />
+                        {/* AI Summarize Button */}
                         <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
-                        onClick={() => setIsSearchExpanded(false)}
-                        aria-label="关闭搜索"
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-primary",
+                                isAiLoading && "animate-spin" // Add spin animation when loading
+                            )}
+                            onClick={handleAiSummarize}
+                            disabled={isAiLoading || !searchTerm.trim()} // Disable if loading or no query
+                            aria-label="AI 总结"
                         >
-                        <X className="h-4 w-4" />
+                            {isAiLoading ? <Loader2 className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
+                        </Button>
+                        {/* Close Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
+                            onClick={() => setIsSearchExpanded(false)}
+                            aria-label="关闭搜索"
+                        >
+                            <X className="h-4 w-4" />
                         </Button>
                     </motion.div>
                 ) : (
@@ -374,10 +377,8 @@ export default function Home() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
-                        // Position this container slightly higher to avoid overlap
-                        className="relative z-10 mb-[-10px]" // Lower the button slightly
+                        className="relative z-10 mb-[-10px]" // Adjusted positioning
                      >
-                         {/* Adjusted class for size and gradient */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -413,7 +414,7 @@ export default function Home() {
          // onSave={handleSaveWebdavSettings}
        />
 
-      {/* Keep Toaster component in case it's needed elsewhere */}
+      {/* Keep Toaster component */}
       <Toaster />
     </main>
   );
