@@ -38,10 +38,12 @@ const deriveTitle = (description?: string): string => {
     const lines = description.split('\n');
     const firstLine = lines[0].trim();
     if (firstLine) {
-        return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine; // Use first line or truncate
+        // Use first line or truncate if longer than 50 chars
+        return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
     }
     // If first line is empty but there's more content, use a snippet
     const snippet = description.trim().substring(0, 50);
+    // Add ellipsis if snippet was truncated, ensure it's not empty
     return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
 };
 
@@ -59,7 +61,8 @@ export default function Home() {
    // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
     setIsClient(true);
-    setAllEvents(sortEventsDescending(mockEvents)); // Load and sort mock data into allEvents
+    // Load and sort mock data into allEvents, ensuring newest are first
+    setAllEvents(sortEventsDescending(mockEvents));
   }, []);
 
 
@@ -75,7 +78,7 @@ export default function Home() {
       imageUrl: newEventData.imageUrl,
       attachment: newEventData.attachment,
     };
-    // Add new event and resort descending
+    // Add new event and resort descending (newest first)
     setAllEvents((prevEvents) => sortEventsDescending([...prevEvents, newEvent]));
     toast({
         title: "事件已添加",
@@ -110,7 +113,11 @@ export default function Home() {
          finalUpdatedData.title = deriveTitle(updatedData.description);
      } else if (updatedData.title === undefined && originalEvent) {
          // Ensure title is updated if description changes, even if title wasn't explicitly passed
-         finalUpdatedData.title = deriveTitle(originalEvent.description);
+         // Check if the existing description needs re-deriving
+         const currentDerivedTitle = deriveTitle(originalEvent.description);
+         if (originalEvent.title !== currentDerivedTitle) {
+            finalUpdatedData.title = currentDerivedTitle;
+         }
      }
 
 
@@ -257,3 +264,4 @@ export default function Home() {
     </main>
   );
 }
+
