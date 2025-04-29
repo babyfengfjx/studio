@@ -4,8 +4,8 @@
 import * as React from 'react';
 import { Search, X } from 'lucide-react'; // Import Search and X icons
 import { motion, AnimatePresence } from 'framer-motion'; // Import motion components
-import { Toaster } from '@/components/ui/toaster';
-import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster'; // Keep toaster for potential other uses
+// import { useToast } from '@/hooks/use-toast'; // Remove useToast import
 import { Timeline } from '@/components/timeline';
 import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar';
@@ -56,7 +56,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = React.useState(''); // State for search term
   const [selectedEventType, setSelectedEventType] = React.useState<EventType | 'all'>('all'); // State for filter
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false); // State for search expansion
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Remove toast hook
 
    // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
@@ -80,21 +80,21 @@ export default function Home() {
     };
     // Add new event and resort descending (newest first)
     setAllEvents((prevEvents) => sortEventsDescending([...prevEvents, newEvent]));
-    toast({
-        title: "事件已添加",
-        description: `类型为 "${getEventTypeLabel(newEvent.eventType)}" 的事件 "${newEvent.title}" 已添加到您的时间轴。`, // Include type in toast
-      });
+    // toast({ // Remove toast notification
+    //     title: "事件已添加",
+    //     description: `类型为 "${getEventTypeLabel(newEvent.eventType)}" 的事件 "${newEvent.title}" 已添加到您的时间轴。`, // Include type in toast
+    //   });
   };
 
   const handleDeleteEvent = (id: string) => {
     const eventToDelete = allEvents.find(e => e.id === id);
     // Filter out the event and resort (though filtering doesn't change order)
     setAllEvents((prevEvents) => sortEventsDescending(prevEvents.filter((event) => event.id !== id)));
-     toast({
-        title: "事件已删除",
-        description: `类型为 "${getEventTypeLabel(eventToDelete?.eventType)}" 的事件 "${eventToDelete?.title}" 已从您的时间轴移除。`, // Include type in toast
-        variant: "destructive",
-      });
+    // toast({ // Remove toast notification
+    //     title: "事件已删除",
+    //     description: `类型为 "${getEventTypeLabel(eventToDelete?.eventType)}" 的事件 "${eventToDelete?.title}" 已从您的时间轴移除。`, // Include type in toast
+    //     variant: "destructive",
+    //   });
   };
 
   // Function to open the edit dialog
@@ -125,11 +125,11 @@ export default function Home() {
       ))
     );
 
-     toast({
-        title: "事件已更新",
-        // Use nullish coalescing for safety, checking finalUpdatedData first for potentially updated values
-        description: `类型为 "${getEventTypeLabel(finalUpdatedData.eventType ?? originalEvent.eventType)}" 的事件 "${finalUpdatedData.title ?? originalEvent.title}" 已更新。`,
-      });
+    // toast({ // Remove toast notification
+    //     title: "事件已更新",
+    //     // Use nullish coalescing for safety, checking finalUpdatedData first for potentially updated values
+    //     description: `类型为 "${getEventTypeLabel(finalUpdatedData.eventType ?? originalEvent.eventType)}" 的事件 "${finalUpdatedData.title ?? originalEvent.title}" 已更新。`,
+    //   });
 
     // Close the dialog after successful edit
     setIsEditDialogOpen(false);
@@ -187,8 +187,8 @@ export default function Home() {
              <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
 
-            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely */}
-             <div className="absolute z-30 bottom-2 left-1/2 -translate-x-1/2 pointer-events-auto"> {/* Centered horizontally, bottom padding */}
+            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely, centered on bottom bar */}
+             <div className="absolute z-30 bottom-2 left-1/2 -translate-x-1/2 pointer-events-auto"> {/* Centered horizontally */}
                 <AnimatePresence mode="wait">
                 {isSearchExpanded ? (
                     <motion.div
@@ -255,9 +255,8 @@ export default function Home() {
         onOpenChange={setIsEditDialogOpen}
         onEditEvent={handleEditEvent}
       />
+      {/* Keep Toaster component in case it's needed elsewhere, even though we removed specific toasts here */}
       <Toaster />
     </main>
   );
 }
-
-    
