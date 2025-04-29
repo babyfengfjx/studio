@@ -4,7 +4,6 @@
 import * as React from 'react';
 import { Search, X } from 'lucide-react'; // Import Search and X icons
 import { motion, AnimatePresence } from 'framer-motion'; // Import motion components
-// import { useToast } from '@/hooks/use-toast'; // Remove useToast import
 import { Timeline } from '@/components/timeline';
 import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar';
@@ -57,7 +56,6 @@ export default function Home() {
   const [selectedEventType, setSelectedEventType] = React.useState<EventType | 'all'>('all'); // State for filter
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false); // State for search expansion
   const [newlyAddedEventId, setNewlyAddedEventId] = React.useState<string | null>(null); // State for highlighting new event
-  // const { toast } = useToast(); // Remove toast hook
 
    // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
@@ -82,8 +80,10 @@ export default function Home() {
     // Add new event and resort descending (newest first)
     setAllEvents((prevEvents) => {
         const updatedEvents = sortEventsDescending([...prevEvents, newEvent]);
-        // Scroll to top after state is updated
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Ensure scroll happens *after* state update is likely processed by React
+        requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
         // Set the ID for highlighting
         setNewlyAddedEventId(newEvent.id);
         // Clear the highlight after a delay
