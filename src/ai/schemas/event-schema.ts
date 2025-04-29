@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Zod schema definition for TimelineEvent.
  */
@@ -12,7 +13,7 @@ export const TimelineEventSchema = z.object({
   // Expect ISO 8601 format string.
   timestamp: z.string().datetime().describe('The date and time of the event in ISO 8601 format.'),
   eventType: EVENT_TYPES_SCHEMA.describe('The type of the event (note, todo, schedule).'),
-  title: z.string().describe('The title of the event (often derived from the description).'),
+  // title: z.string().describe('The title of the event (often derived from the description).'), // Title removed
   description: z.string().describe('The main content or description of the event.'),
   imageUrl: z.string().url().optional().describe('Optional URL of an associated image.'),
   attachment: z.object({

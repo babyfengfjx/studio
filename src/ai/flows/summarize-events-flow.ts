@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to summarize timeline events based on a user query.
@@ -31,7 +32,6 @@ Events:
 - Date: {{timestamp}}
   Type: {{eventType}}
   Description: {{description}}
-  {{#if title}}(Title: {{title}}){{/if}}
   {{#if imageUrl}}(Has Image){{/if}}
   {{#if attachment}}(Has Attachment: {{attachment.name}}){{/if}}
 

@@ -52,7 +52,7 @@ const EVENT_TYPES: EventType[] = ['note', 'todo', 'schedule'];
 // Check if running in the browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Function to derive title from description (e.g., first line or first 50 chars)
+// Function to derive title from description (used for display in dialog header)
 const deriveTitle = (description?: string): string => {
     if (!description) return '新事件'; // Default title if no description
     const lines = description.split('\n');
@@ -66,7 +66,7 @@ const deriveTitle = (description?: string): string => {
 };
 
 // Zod schema with Chinese validation messages and file inputs
-// Title is removed from direct user input validation, will be derived
+// Title is removed from validation
 const formSchema = z.object({
   eventType: z.enum(EVENT_TYPES, { required_error: "请选择事件类型。" }), // Add eventType validation
   description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(), // Keep description validation
@@ -104,7 +104,7 @@ type EditEventFormProps = {
   event: TimelineEvent | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onEditEvent: (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => void; // Use Partial for updates
+  onEditEvent: (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>>) => void; // Title removed from type constraint
 };
 
 export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: EditEventFormProps) {
@@ -126,7 +126,6 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     // Default values will be set in useEffect
     defaultValues: {
       eventType: 'note', // Default, will be overridden
-      // title is removed from default values
       description: "",
       image: undefined,
       attachment: undefined,
@@ -135,14 +134,13 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   const attachmentFile = form.watch("attachment");
   const imageFile = form.watch("image");
-  const descriptionValue = form.watch("description"); // Watch description for title display
+  const descriptionValue = form.watch("description"); // Watch description for title display in header
 
  // Reset form and manage visibility when the event prop changes or dialog opens/closes
  React.useEffect(() => {
     if (event && isOpen) {
         form.reset({
             eventType: event.eventType,
-            // title is removed from reset
             description: event.description ?? "",
             image: undefined, // Reset file inputs on open
             attachment: undefined,
@@ -165,7 +163,6 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         // Reset everything when dialog closes
          form.reset({
             eventType: 'note',
-            // title is removed from reset
             description: "",
             image: undefined,
             attachment: undefined,
@@ -209,13 +206,13 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!event) return;
 
-    // Derive title from the description before submitting
-    const derivedTitle = deriveTitle(values.description);
+    // Title is no longer explicitly managed or derived here for submission
+    // It will be derived dynamically by display components (Timeline, EventList)
 
-    const updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>> = {
+    const updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> = { // Title removed from type
         eventType: values.eventType, // Include event type in update
-        title: derivedTitle, // Set the derived title
         description: values.description,
+        // title: '', // No longer setting title here
     };
 
     // Handle Image: Upload new, clear existing, or keep existing
@@ -276,7 +273,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   if (!event) return null; // Don't render the dialog if no event is selected
 
-  // Derive title for display purposes based on current description form value
+  // Derive title for display purposes in the Dialog Header based on current description form value
   const displayTitle = deriveTitle(descriptionValue);
 
   return (
@@ -284,7 +281,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[480px]"> {/* Increased width slightly */}
             <DialogHeader>
-            {/* Display derived title */}
+            {/* Display derived title for context */}
             <DialogTitle className="truncate pr-8">{displayTitle}</DialogTitle>
             <DialogDescription>
                  更新事件详情。点击下方图标编辑类型、图片或附件。 {/* Updated Description */}
@@ -293,17 +290,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
 
-                 {/* Title (Hidden/Read-Only - No longer directly editable) */}
-                 {/* You could optionally show the derived title here read-only if needed */}
-                 {/* <Input type="hidden" {...form.register("title")} /> */}
-                 {/* Or a disabled input for display */}
-                  {/* <FormItem>
-                     <FormLabel>标题 (自动生成)</FormLabel>
-                     <FormControl>
-                         <Input disabled value={displayTitle} className="text-lg font-semibold text-muted-foreground"/>
-                     </FormControl>
-                  </FormItem> */}
-
+                 {/* Title input removed */}
 
                 {/* Description (Now the primary content input) */}
                  <FormField

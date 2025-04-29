@@ -9,7 +9,7 @@ import { zhCN } from 'date-fns/locale';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'; // Removed CardTitle import
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,11 +67,18 @@ const FormattedTimestamp: React.FC<{ timestamp: Date; formatString?: string }> =
     const [formattedDate, setFormattedDate] = React.useState<string | null>(null);
 
     React.useEffect(() => {
+        // Format the date only on the client side after mount
         setFormattedDate(format(timestamp, formatString, { locale: zhCN }));
-    }, [timestamp, formatString]);
+    }, [timestamp, formatString]); // Re-run if timestamp changes
 
     if (!formattedDate) {
-        return <span className="opacity-50">...</span>; // Simple placeholder
+         // Return formatted date directly during SSR/initial render to avoid hydration mismatch potential
+        try {
+            return <>{format(timestamp, formatString, { locale: zhCN })}</>;
+        } catch (e) {
+             // Fallback for invalid date during SSR
+            return <span className="opacity-50">...</span>;
+        }
     }
     return <>{formattedDate}</>;
 };
@@ -125,7 +132,8 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                         <div className="flex items-center justify-between gap-2">
                            <div className="flex items-center gap-2 min-w-0">
                                {getEventTypeIcon(event.eventType)}
-                               <CardTitle className="text-base font-medium truncate flex-1">{event.title}</CardTitle>
+                               {/* Removed CardTitle display */}
+                               <span className="text-base font-medium truncate flex-1">{deriveTitle(event.description)}</span> {/* Display derived title */}
                            </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
                                <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -167,7 +175,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                         <AlertDialogHeader>
                                         <AlertDialogTitle>确定要删除吗？</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}"、标题为 "{eventToDelete.title}" 的事件。
+                                             此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}" 的事件。 {/* Removed title reference */}
                                         </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -199,7 +207,7 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                 >
                                     <Image
                                     src={event.imageUrl}
-                                    alt={`事件 "${event.title}" 的图片预览`}
+                                    alt={`事件图片预览`} // Updated alt text
                                     width={80}
                                     height={80}
                                     className="object-cover w-full h-full"
@@ -248,3 +256,18 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
     </Dialog>
   );
 }
+
+// Function to derive title from description (moved from page.tsx for reuse)
+const deriveTitle = (description?: string): string => {
+    if (!description) return '新事件'; // Default title if no description
+    const lines = description.split('\n');
+    const firstLine = lines[0].trim();
+    if (firstLine) {
+        // Use first line or truncate if longer than 50 chars
+        return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
+    }
+    // If first line is empty but there's more content, use a snippet
+    const snippet = description.trim().substring(0, 50);
+    // Add ellipsis if snippet was truncated, ensure it's not empty
+    return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
+};

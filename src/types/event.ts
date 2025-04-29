@@ -6,7 +6,7 @@ export interface TimelineEvent {
   id: string;
   timestamp: Date; // Keep as Date for frontend logic (sorting, formatting)
   eventType: EventType;
-  title: string;
+  title: string; // Title is still present but often derived, not mandatory input
   description: string;
   imageUrl?: string;
   attachment?: {

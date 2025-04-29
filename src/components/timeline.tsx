@@ -9,7 +9,7 @@ import { zhCN } from 'date-fns/locale'; // Import Chinese locale
 import Image from 'next/image'; // Import next/image
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'; // Removed CardTitle import
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +63,16 @@ const FormattedTimestamp: React.FC<{ timestamp: Date }> = ({ timestamp }) => {
 
     if (!formattedDate) {
         // Render loading state or placeholder initially and on server
-        return <span className="opacity-50">加载中...</span>;
+        // return <span className="opacity-50">加载中...</span>;
+        // Return formatted date directly during SSR/initial render to avoid hydration mismatch potential
+        // Note: This might show server time initially if server/client timezones differ significantly
+        // and user locale differs from server. Consider a more robust timezone handling if needed.
+        try {
+            return <>{format(timestamp, 'yyyy年M月d日 HH:mm', { locale: zhCN })}</>;
+        } catch (e) {
+            // Fallback for invalid date during SSR
+            return <span className="opacity-50">...</span>;
+        }
     }
 
     return <>{formattedDate}</>;
@@ -111,190 +120,192 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                 ></div>
 
                 <AnimatePresence initial={false}>
-                    {events.map((event, index) => {
-                    // If index is even, card is on the right, timestamp on the left.
-                    // If index is odd, card is on the left, timestamp on the right.
-                    const isCardRightAligned = index % 2 === 0;
-                    const isNewlyAdded = event.id === newlyAddedEventId;
+                    {events.length === 0 ? (
+                         <p className="text-center text-muted-foreground py-10">没有找到事件。</p>
+                    ) : (
+                        events.map((event, index) => {
+                        // If index is even, card is on the right, timestamp on the left.
+                        // If index is odd, card is on the left, timestamp on the right.
+                        const isCardRightAligned = index % 2 === 0;
+                        const isNewlyAdded = event.id === newlyAddedEventId;
 
-                    return (
-                        <motion.div
-                            key={event.id}
-                            layout // Enable layout animation
-                            initial={{ opacity: 0, y: 50, scale: 0.3 }}
-                            animate={{
-                                opacity: 1,
-                                y: 0,
-                                scale: isNewlyAdded ? highlightAnimation.scale : 1, // Apply scale animation if newly added
-                            }}
-                            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-                            transition={{
-                                type: 'spring',
-                                stiffness: 500,
-                                damping: 30,
-                                // Apply highlight transition only if newly added
-                                ...(isNewlyAdded ? highlightAnimation.transition : {}),
-                            }}
-                            // Main container for the row, using flex to align items
-                            className={cn(
-                                "mb-12 flex items-center w-full relative", // Use items-center for vertical alignment
-                                isCardRightAligned ? 'flex-row' : 'flex-row-reverse' // Change order: timestamp first or card first
-                            )}
-                            style={{ zIndex: events.length - index }} // Ensure later items overlap for visual correctness
-                        >
-                            {/* Timeline Dot - Centered vertically relative to the row */}
-                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                            <div className="bg-accent rounded-full p-1.5 shadow-md ring-2 ring-background"> {/* Adjusted padding */}
-                                {getEventTypeIcon(event.eventType)}
-                            </div>
-                            </div>
+                        return (
+                            <motion.div
+                                key={event.id}
+                                layout // Enable layout animation
+                                initial={{ opacity: 0, y: 50, scale: 0.3 }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: isNewlyAdded ? highlightAnimation.scale : 1, // Apply scale animation if newly added
+                                }}
+                                exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+                                transition={{
+                                    type: 'spring',
+                                    stiffness: 500,
+                                    damping: 30,
+                                    // Apply highlight transition only if newly added
+                                    ...(isNewlyAdded ? highlightAnimation.transition : {}),
+                                }}
+                                // Main container for the row, using flex to align items
+                                className={cn(
+                                    "mb-12 flex items-center w-full relative", // Use items-center for vertical alignment
+                                    isCardRightAligned ? 'flex-row' : 'flex-row-reverse' // Change order: timestamp first or card first
+                                )}
+                                style={{ zIndex: events.length - index }} // Ensure later items overlap for visual correctness
+                            >
+                                {/* Timeline Dot - Centered vertically relative to the row */}
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                <div className="bg-accent rounded-full p-1.5 shadow-md ring-2 ring-background"> {/* Adjusted padding */}
+                                    {getEventTypeIcon(event.eventType)}
+                                </div>
+                                </div>
 
-                            {/* Timestamp Column */}
-                            <div className={cn(
-                                "w-1/2", // Takes up half the width
-                                isCardRightAligned ? 'pr-8 text-right' : 'pl-8 text-left' // Padding away from center line, text aligned to outside
-                            )}>
-                            {/* Enhanced Timestamp Display */}
-                            <div className={cn(
-                                "inline-block text-base font-semibold text-foreground px-3 py-1.5 rounded-lg bg-background/60 backdrop-blur-md shadow-md border border-border/50", // Increased font size, padding, bolder text, slightly stronger background/shadow
-                            )}>
-                                {/* Use the client-side formatting component */}
-                                <FormattedTimestamp timestamp={event.timestamp} />
-                            </div>
-                            </div>
-
-                            {/* Card Column */}
-                            <div className={cn(
-                                "w-1/2", // Takes up the other half
-                                isCardRightAligned ? 'pl-8' : 'pr-8' // Padding away from center line
-                            )}>
-                                <Card className={cn(
-                                    "shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10, flex col
-                                    'text-left',
-                                    // Apply subtle gradient background
-                                    "bg-gradient-to-br from-card via-secondary/10 to-accent/10 dark:from-card dark:via-secondary/5 dark:to-accent/5"
+                                {/* Timestamp Column */}
+                                <div className={cn(
+                                    "w-1/2", // Takes up half the width
+                                    isCardRightAligned ? 'pr-8 text-right' : 'pl-8 text-left' // Padding away from center line, text aligned to outside
                                 )}>
+                                {/* Enhanced Timestamp Display */}
+                                <div className={cn(
+                                    "inline-block text-base font-semibold text-foreground px-3 py-1.5 rounded-lg bg-background/60 backdrop-blur-md shadow-md border border-border/50", // Increased font size, padding, bolder text, slightly stronger background/shadow
+                                )}>
+                                    {/* Use the client-side formatting component */}
+                                    <FormattedTimestamp timestamp={event.timestamp} />
+                                </div>
+                                </div>
 
-                                    {/* Card Header - Title and Actions */}
-                                    <CardHeader className="pb-3 pt-4 flex-shrink-0"> {/* Adjusted padding */}
-                                        <div className="flex items-start justify-between"> {/* Items start, space between title block and actions */}
-                                            {/* Title */}
-                                            <CardTitle className="text-lg font-semibold flex-1 min-w-0 mr-2">{event.title}</CardTitle>
-                                            {/* Actions */}
-                                            <div className="flex space-x-1 flex-shrink-0">
-                                                {/* Edit button */}
+                                {/* Card Column */}
+                                <div className={cn(
+                                    "w-1/2", // Takes up the other half
+                                    isCardRightAligned ? 'pl-8' : 'pr-8' // Padding away from center line
+                                )}>
+                                    <Card className={cn(
+                                        "shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10, flex col
+                                        'text-left',
+                                        // Apply subtle gradient background
+                                        "bg-gradient-to-br from-card via-secondary/10 to-accent/10 dark:from-card dark:via-secondary/5 dark:to-accent/5"
+                                    )}>
+
+                                        {/* Card Header - Only Actions now */}
+                                        <CardHeader className="pb-0 pt-2 px-2 flex-shrink-0"> {/* Adjusted padding */}
+                                            <div className="flex items-start justify-end"> {/* Only justify end for actions */}
+                                                {/* Actions */}
+                                                <div className="flex space-x-1 flex-shrink-0">
+                                                    {/* Edit button */}
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditEvent(event)} aria-label="编辑事件"> {/* Translate aria-label */}
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>编辑事件</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    {/* Delete Button */}
+                                                    <AlertDialog>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                        aria-label="删除事件" // Translate aria-label
+                                                                        onClick={() => setEventToDelete(event)} // Set the event to delete on click
+                                                                        >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>删除事件</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        {/* Conditionally render content based on selected event */}
+                                                        {eventToDelete?.id === event.id && (
+                                                            <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>确定要删除吗？</AlertDialogTitle> {/* Translate */}
+                                                                <AlertDialogDescription>
+                                                                此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}" 的事件。 {/* Translate and remove title */}
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel onClick={() => setEventToDelete(null)}>取消</AlertDialogCancel> {/* Translate & clear state on cancel */}
+                                                                <AlertDialogAction
+                                                                    className="bg-destructive hover:bg-destructive/90"
+                                                                    onClick={() => {
+                                                                        if (eventToDelete) { // Null check before accessing id
+                                                                            onDeleteEvent(eventToDelete.id);
+                                                                        }
+                                                                        setEventToDelete(null); // Clear state after deletion
+                                                                        }}>
+                                                                    删除 {/* Translate */}
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        )}
+                                                    </AlertDialog>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+
+                                        {/* Card Content (Description and Image) */}
+                                        <CardContent className={cn(
+                                            "pt-2 pb-4 px-4 flex-grow flex items-center", // Adjusted padding, make content a flex container, center items vertically
+                                            event.description ? "justify-between" : "justify-end" // Justify between if description exists, else end for just image
+                                        )}>
+                                            {event.description && (
+                                                <p className="text-sm text-foreground whitespace-pre-wrap flex-1 mr-3">{event.description}</p> /* Added whitespace-pre-wrap, flex-1, margin-right */
+                                            )}
+                                            {/* Circular Image Preview (if imageUrl exists) */}
+                                            {event.imageUrl && (
+                                                <DialogTrigger asChild>
+                                                    <button
+                                                        onClick={() => handleImageClick(event.imageUrl!)}
+                                                        className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border-2 border-border hover:border-primary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                                        aria-label="查看图片"
+                                                    >
+                                                        <Image
+                                                            src={event.imageUrl}
+                                                            alt={`事件图片预览`} // Updated alt text
+                                                            fill
+                                                            className="object-cover" // Cover the circle
+                                                            sizes="40px" // Add sizes attribute
+                                                        />
+                                                    </button>
+                                                </DialogTrigger>
+                                            )}
+                                        </CardContent>
+
+
+                                        {/* Card Footer (Attachment) */}
+                                        {event.attachment && (
+                                            <CardFooter className={cn(
+                                                "pt-0 pb-3 px-4 border-t border-border/20 mt-auto flex justify-start" // Aligned to start, subtle border, adjusted padding
+                                            )}>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditEvent(event)} aria-label="编辑事件"> {/* Translate aria-label */}
-                                                            <Edit className="h-4 w-4" />
+                                                        {/* In a real app, this would be a link to the actual file */}
+                                                        <Button variant="link" size="sm" className="text-muted-foreground p-0 h-auto">
+                                                            <Paperclip className="h-4 w-4 mr-1" />
+                                                            {event.attachment.name}
                                                         </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
-                                                        <p>编辑事件</p>
+                                                        <p>下载附件: {event.attachment.name}</p>
                                                     </TooltipContent>
                                                 </Tooltip>
-                                                {/* Delete Button */}
-                                                <AlertDialog>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                                    aria-label="删除事件" // Translate aria-label
-                                                                    onClick={() => setEventToDelete(event)} // Set the event to delete on click
-                                                                    >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>删除事件</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                    {/* Conditionally render content based on selected event */}
-                                                    {eventToDelete?.id === event.id && (
-                                                        <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>确定要删除吗？</AlertDialogTitle> {/* Translate */}
-                                                            <AlertDialogDescription>
-                                                            此操作无法撤销。这将永久删除类型为 "{getEventTypeLabel(eventToDelete.eventType)}"、标题为 "{eventToDelete.title}" 的事件。 {/* Translate and add type */}
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel onClick={() => setEventToDelete(null)}>取消</AlertDialogCancel> {/* Translate & clear state on cancel */}
-                                                            <AlertDialogAction
-                                                                className="bg-destructive hover:bg-destructive/90"
-                                                                onClick={() => {
-                                                                    if (eventToDelete) { // Null check before accessing id
-                                                                        onDeleteEvent(eventToDelete.id);
-                                                                    }
-                                                                    setEventToDelete(null); // Clear state after deletion
-                                                                    }}>
-                                                                删除 {/* Translate */}
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    )}
-                                                </AlertDialog>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-
-                                    {/* Card Content (Description and Image) */}
-                                    <CardContent className={cn(
-                                        "pt-0 pb-4 flex-grow flex items-center", // Make content a flex container, center items vertically
-                                        event.description ? "justify-between" : "justify-end" // Justify between if description exists, else end for just image
-                                    )}>
-                                        {event.description && (
-                                            <p className="text-sm text-foreground whitespace-pre-wrap flex-1 mr-3">{event.description}</p> /* Added whitespace-pre-wrap, flex-1, margin-right */
+                                            </CardFooter>
                                         )}
-                                        {/* Circular Image Preview (if imageUrl exists) */}
-                                        {event.imageUrl && (
-                                            <DialogTrigger asChild>
-                                                <button
-                                                    onClick={() => handleImageClick(event.imageUrl!)}
-                                                    className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border-2 border-border hover:border-primary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                                    aria-label="查看图片"
-                                                >
-                                                    <Image
-                                                        src={event.imageUrl}
-                                                        alt={`事件 "${event.title}" 的图片预览`}
-                                                        fill
-                                                        className="object-cover" // Cover the circle
-                                                        sizes="40px" // Add sizes attribute
-                                                    />
-                                                </button>
-                                            </DialogTrigger>
-                                        )}
-                                    </CardContent>
-
-
-                                    {/* Card Footer (Attachment) */}
-                                    {event.attachment && (
-                                        <CardFooter className={cn(
-                                            "pt-0 pb-3 border-t border-border/20 mt-auto flex justify-start" // Aligned to start, subtle border
-                                        )}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    {/* In a real app, this would be a link to the actual file */}
-                                                    <Button variant="link" size="sm" className="text-muted-foreground p-0 h-auto">
-                                                        <Paperclip className="h-4 w-4 mr-1" />
-                                                        {event.attachment.name}
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>下载附件: {event.attachment.name}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </CardFooter>
-                                    )}
-                                </Card>
-                            </div>
-                        </motion.div>
-                    );
-                    })}
+                                    </Card>
+                                </div>
+                            </motion.div>
+                        );
+                        })
+                     )}
                 </AnimatePresence>
             </div>
         </TooltipProvider>

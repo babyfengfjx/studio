@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { summarizeEvents } from '@/ai/flows/summarize-events-flow'; // Import AI flow function
 import type { SummarizeEventsInput } from '@/ai/schemas/summarize-events-schema'; // Import AI input type from new schema file
 import type { TimelineEventInput } from '@/ai/schemas/event-schema'; // Import AI schema type for event mapping
-// Removed useAuth import
+
 
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
@@ -39,20 +39,20 @@ const getEventTypeLabel = (eventType?: EventType): string => {
   }
 };
 
-// Function to derive title from description (e.g., first line or first 50 chars)
-const deriveTitle = (description?: string): string => {
-    if (!description) return '新事件'; // Default title if no description
-    const lines = description.split('\n');
-    const firstLine = lines[0].trim();
-    if (firstLine) {
-        // Use first line or truncate if longer than 50 chars
-        return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
-    }
-    // If first line is empty but there's more content, use a snippet
-    const snippet = description.trim().substring(0, 50);
-    // Add ellipsis if snippet was truncated, ensure it's not empty
-    return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
-};
+// Function to derive title from description (e.g., first line or first 50 chars) - Moved to event-list and edit-event-form
+// const deriveTitle = (description?: string): string => {
+//     if (!description) return '新事件'; // Default title if no description
+//     const lines = description.split('\n');
+//     const firstLine = lines[0].trim();
+//     if (firstLine) {
+//         // Use first line or truncate if longer than 50 chars
+//         return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
+//     }
+//     // If first line is empty but there's more content, use a snippet
+//     const snippet = description.trim().substring(0, 50);
+//     // Add ellipsis if snippet was truncated, ensure it's not empty
+//     return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
+// };
 
 
 export default function Home() {
@@ -116,16 +116,16 @@ export default function Home() {
    }, []); // Empty dependency array, runs once on mount and cleans up
 
 
-  // Updated handleAddEvent: Title is derived from description
+  // handleAddEvent no longer needs to derive title here
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
      // TODO: Save to chosen data store (e.g., local state, trigger WebDAV save)
      console.log("Adding event");
 
-     const derivedTitle = deriveTitle(newEventData.description);
+     // Title is now derived where it's displayed (Timeline, EventList) or edited (EditForm)
     const newEvent: TimelineEvent = {
       id: crypto.randomUUID(), // Generate a unique ID (replace with DB ID if saving)
       timestamp: new Date(), // Set timestamp to current time
-      title: derivedTitle, // Derive title from description
+      title: '', // Title is intentionally left empty, derived dynamically elsewhere
       description: newEventData.description, // Full description
       eventType: newEventData.eventType,
       imageUrl: newEventData.imageUrl,
@@ -140,10 +140,10 @@ export default function Home() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
              }
              // Optionally scroll to top in list view as well
-             // else if (viewMode === 'list') {
-             //    const listContainer = document.getElementById('event-list-container'); // Assuming list has an ID
-             //    if (listContainer) listContainer.scrollTo({ top: 0, behavior: 'smooth' });
-             // }
+             else if (viewMode === 'list') {
+                const listContainer = document.getElementById('event-list-container'); // Assuming list has an ID
+                if (listContainer) listContainer.scrollTo({ top: 0, behavior: 'smooth' });
+             }
         });
         // Set the ID for highlighting
         setNewlyAddedEventId(newEvent.id);
@@ -167,24 +167,16 @@ export default function Home() {
     setIsEditDialogOpen(true);
   };
 
-  // Function to handle the actual edit submission
-  // Accepts Partial update data
- const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
+  // handleEditEvent no longer needs to derive title here
+ const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>>) => { // Title removed from type constraint
      // TODO: Implement update in chosen data store
      console.log("Editing event:", id);
 
      const originalEvent = allEvents.find(e => e.id === id);
      if (!originalEvent) return; // Guard clause
 
-     // Prepare the final update object, explicitly typing it might help clarity
-     const finalUpdatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> & { title?: string } = { ...updatedData };
-
-     // If description is being updated (and is not undefined), derive the new title
-     if (updatedData.description !== undefined) {
-         finalUpdatedData.title = deriveTitle(updatedData.description);
-     }
-     // Note: No explicit 'else' needed. If `updatedData.title` was provided, it's already in `finalUpdatedData`.
-     // If neither description nor title were in `updatedData`, the event's title remains unchanged implicitly via the spread below.
+     // Prepare the final update object - Title is handled within EditEventForm
+     const finalUpdatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> = { ...updatedData };
 
     setAllEvents((prevEvents) =>
       sortEventsDescending(prevEvents.map((event) =>
@@ -198,11 +190,11 @@ export default function Home() {
   };
 
 
-  // Filter events based on search term and selected type
+  // Filter events based on search term (only description) and selected type
   const filteredEvents = React.useMemo(() => {
     return allEvents.filter(event => {
+      // Search only in description now
       const matchesSearch = searchTerm === '' ||
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesFilter = selectedEventType === 'all' || event.eventType === selectedEventType;
@@ -383,7 +375,7 @@ export default function Home() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
                         // Position this container slightly higher to avoid overlap
-                        className="relative z-10" // Ensure it's above the form footer but below expanded search
+                        className="relative z-10 mb-[-10px]" // Lower the button slightly
                      >
                          {/* Adjusted class for size and gradient */}
                         <Button
