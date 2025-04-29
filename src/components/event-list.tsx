@@ -127,11 +127,12 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                         ...(isNewlyAdded ? highlightAnimation.transition : {}),
                      }}
                     >
-                    <Card className={cn("shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden", isNewlyAdded && "border-2 border-primary")}>
+                    {/* Add group class for hover effect */}
+                    <Card className={cn("shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden group", isNewlyAdded && "border-2 border-primary")}>
                         {/* Card Header Removed */}
                         <CardContent className="p-3 text-sm text-foreground relative"> {/* Add relative positioning */}
-                            {/* Action Buttons (Top Right) */}
-                             <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                            {/* Action Buttons (Top Right) - Appear on hover */}
+                             <div className="absolute top-2 right-2 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200">
                                 {/* Timestamp moved here */}
                                 <span className="text-xs text-muted-foreground whitespace-nowrap mr-1">
                                     <FormattedTimestamp timestamp={event.timestamp} formatString="M月d日 HH:mm" />

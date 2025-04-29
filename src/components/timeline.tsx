@@ -105,7 +105,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                     className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2"
                     style={{
                     // Define the colorful gradient
-                    backgroundImage: `linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)))`,
+                    backgroundImage: `linear-gradient(to bottom, hsl(var(--chart-1)), hsl(var(--chart-2)), hsl(var(--chart-3)), hsl(var(--chart-4)), hsl(var(--chart-5)))`,
                     // Use a mask to create the dashed effect
                     maskImage: `repeating-linear-gradient(to bottom, black 0, black 8px, transparent 8px, transparent 16px)`, // 8px dash, 8px gap
                     maskSize: '1px 16px', // Control width and pattern repeat size
@@ -144,7 +144,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                 }}
                                 // Main container for the row, using flex to align items
                                 className={cn(
-                                    "mb-12 flex items-start w-full relative", // Use items-start for vertical alignment with timestamp
+                                    "mb-12 flex items-start w-full relative group", // Use items-start for vertical alignment with timestamp, Add group class for hover effect
                                     isCardRightAligned ? 'flex-row' : 'flex-row-reverse' // Change order: timestamp first or card first
                                 )}
                                 style={{ zIndex: events.length - index }} // Ensure later items overlap for visual correctness
@@ -176,7 +176,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                     isCardRightAligned ? 'pl-8' : 'pr-8' // Padding away from center line
                                 )}>
                                     <Card className={cn(
-                                        "shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10, flex col
+                                        "shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-border/50 relative z-10 flex flex-col overflow-hidden", // Increased shadow, subtle border, z-10, flex col, overflow hidden
                                         'text-left',
                                         // Apply subtle gradient background
                                         "bg-gradient-to-br from-card via-secondary/10 to-accent/10 dark:from-card dark:via-secondary/5 dark:to-accent/5"
@@ -189,8 +189,8 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                             "pt-4 pb-4 px-4 flex-grow relative", // Add relative positioning for action buttons, adjust padding
                                             event.description ? "" : "justify-end" // Only adjust justify if no description
                                         )}>
-                                            {/* Action Buttons (Top Right) */}
-                                            <div className="absolute top-2 right-2 flex space-x-1 z-10">
+                                            {/* Action Buttons (Top Right) - Appear on hover */}
+                                             <div className="absolute top-2 right-2 flex space-x-1 z-10 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200">
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditEvent(event)} aria-label="编辑事件"> {/* Translate aria-label */}
