@@ -153,7 +153,7 @@ export default function Home() {
   if (!isClient) {
      // You could show a loading spinner or skeleton here
      return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4"> {/* Added padding */}
+        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4">
           <p className="text-foreground">加载中...</p> {/* Basic loading indicator */}
         </main>
       );
@@ -262,4 +262,3 @@ export default function Home() {
     </main>
   );
 }
-
