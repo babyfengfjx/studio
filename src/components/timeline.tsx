@@ -169,8 +169,10 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                 isCardRightAligned ? 'pl-8' : 'pr-8' // Padding away from center line
                             )}>
                                 <Card className={cn(
-                                    "shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10, flex col
-                                    'text-left'
+                                    "shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-border/50 relative z-10 flex flex-col", // Increased shadow, subtle border, z-10, flex col
+                                    'text-left',
+                                    // Apply subtle gradient background
+                                    "bg-gradient-to-br from-card via-secondary/10 to-accent/10 dark:from-card dark:via-secondary/5 dark:to-accent/5"
                                 )}>
 
                                     {/* Card Header - Title and Actions */}
@@ -272,7 +274,7 @@ export function Timeline({ events, onEditEvent, onDeleteEvent, newlyAddedEventId
                                     {/* Card Footer (Attachment) */}
                                     {event.attachment && (
                                         <CardFooter className={cn(
-                                            "pt-0 pb-3 border-t mt-auto flex justify-start" // Aligned to start
+                                            "pt-0 pb-3 border-t border-border/20 mt-auto flex justify-start" // Aligned to start, subtle border
                                         )}>
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -325,4 +327,3 @@ const getEventTypeLabel = (eventType: EventType): string => {
     default: return '事件';
   }
 };
-
