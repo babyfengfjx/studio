@@ -102,6 +102,14 @@ export default function Home() {
     };
    }, []);
 
+    // Function to close search and reset filters
+    const closeAndResetSearch = () => {
+        setIsSearchExpanded(false);
+        setSearchTerm('');
+        setSelectedEventType('all');
+        setSelectedDateFilter('all');
+    };
+
     // Effect to handle clicks outside the expanded search area
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -110,11 +118,7 @@ export default function Home() {
                  // Also check if the click was on the search trigger button itself to prevent immediate closing
                  const triggerButton = document.getElementById('search-trigger-button'); // Assuming the trigger button has this ID
                  if (!triggerButton || !triggerButton.contains(event.target as Node)) {
-                    setIsSearchExpanded(false);
-                    // Reset filters when closing by clicking outside
-                    setSearchTerm('');
-                    setSelectedEventType('all');
-                    setSelectedDateFilter('all');
+                    closeAndResetSearch(); // Use the close/reset function
                  }
             }
         };
@@ -129,6 +133,25 @@ export default function Home() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isSearchExpanded]); // Depend only on isSearchExpanded
+
+    // Effect to handle Escape key press to close search
+    React.useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Escape') {
+            closeAndResetSearch();
+          }
+        };
+
+        // Add listener only when search is expanded
+        if (isSearchExpanded) {
+          document.addEventListener('keydown', handleKeyDown);
+        }
+
+        // Cleanup listener
+        return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+        };
+      }, [isSearchExpanded]); // Depend only on isSearchExpanded
 
 
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
@@ -270,13 +293,7 @@ export default function Home() {
         }
     };
 
-    // Function to close search and reset filters
-    const closeAndResetSearch = () => {
-        setIsSearchExpanded(false);
-        setSearchTerm('');
-        setSelectedEventType('all');
-        setSelectedDateFilter('all');
-    };
+
 
 
   // Render only on the client to avoid hydration issues with Date formatting and initial load
@@ -454,3 +471,4 @@ export default function Home() {
     </main>
   );
 }
+
