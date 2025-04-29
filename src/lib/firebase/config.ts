@@ -8,6 +8,7 @@ import { getAuth, Auth } from 'firebase/auth';
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 // IMPORTANT: Ensure these environment variables are correctly set in your .env.local file
 // and prefixed with NEXT_PUBLIC_ for client-side access.
+// YOU MUST RESTART your development server after creating or modifying .env.local
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -28,10 +29,11 @@ if (!getApps().length) {
     !firebaseConfig.projectId
   ) {
     console.error(
-      'Firebase configuration is missing. Check your .env.local file and ensure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set.'
+      'Firebase configuration is missing or incomplete. Please ensure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set in your .env.local file. Remember to restart the development server (e.g., `npm run dev`) after modifying the .env.local file.'
     );
-    // Depending on the desired behavior, you might throw an error or handle this differently
-    // For now, we'll let initialization proceed, but auth/other services might fail.
+    // Throw an error during development to make the configuration issue explicit.
+    // This prevents the application from potentially running with invalid credentials.
+    throw new Error("Invalid Firebase configuration. Check browser console and .env.local file.");
   }
   app = initializeApp(firebaseConfig);
 } else {
