@@ -56,6 +56,8 @@ export default function Home() {
   const [selectedEventType, setSelectedEventType] = React.useState<EventType | 'all'>('all'); // State for filter
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false); // State for search expansion
   const [newlyAddedEventId, setNewlyAddedEventId] = React.useState<string | null>(null); // State for highlighting new event
+  const quickAddFormRef = React.useRef<HTMLDivElement>(null); // Ref for the quick add form container
+  const [bottomPadding, setBottomPadding] = React.useState(140); // Initial bottom padding
 
    // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
@@ -63,6 +65,25 @@ export default function Home() {
     // Load and sort mock data into allEvents, ensuring newest are first
     setAllEvents(sortEventsDescending(mockEvents));
   }, []);
+
+   // Calculate bottom padding based on quick add form height
+   React.useEffect(() => {
+    const updatePadding = () => {
+      if (quickAddFormRef.current) {
+        // Adjust padding: Form height + Search trigger height + some buffer
+        const formHeight = quickAddFormRef.current.offsetHeight;
+        // Estimate search trigger area height (adjust as needed)
+        const searchTriggerHeight = isSearchExpanded ? 80 : 60; // Approximate height
+        setBottomPadding(formHeight + searchTriggerHeight);
+      }
+    };
+
+    // Update padding on initial load and when search expands/collapses
+    updatePadding();
+    // Also update on window resize
+    window.addEventListener('resize', updatePadding);
+    return () => window.removeEventListener('resize', updatePadding);
+   }, [isSearchExpanded]); // Re-run when search expansion changes
 
 
   // Updated handleAddEvent: Title is derived from description
@@ -159,7 +180,10 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
       {/* Main Content Area - Adjust bottom padding dynamically */}
-       <div className="container mx-auto px-4 w-full max-w-4xl pb-[140px]"> {/* Adjust bottom padding */}
+       <div
+          className="container mx-auto px-4 w-full max-w-4xl"
+          style={{ paddingBottom: `${bottomPadding}px` }} // Apply dynamic padding
+       >
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
         {/* Timeline Section */}
@@ -173,29 +197,24 @@ export default function Home() {
         </div>
       </div>
 
-       {/* Quick Add Event Form & Search - Fixed at the bottom */}
-       {/* Container for both quick add and search, using relative positioning */}
-       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pointer-events-none">
-         <div className="container mx-auto max-w-4xl relative pointer-events-auto"> {/* Removed flex, added relative */}
-           {/* Quick Add Form takes full space */}
-           <div className="w-full">
-             <QuickAddEventForm onAddEvent={handleAddEvent} />
-           </div>
-
-            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely, centered on bottom bar */}
-             <div className="absolute z-30 bottom-2 left-1/2 -translate-x-1/2 pointer-events-auto"> {/* Centered horizontally */}
+       {/* Quick Add Event Form & Search - Fixed container at the bottom */}
+       <div ref={quickAddFormRef} className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-transparent pointer-events-none">
+         {/* Container for centering content within the fixed area */}
+         <div className="container mx-auto max-w-4xl relative pointer-events-auto">
+           {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely ABOVE the quick add form */}
+             <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, mb-2 for spacing */}
                 <AnimatePresence mode="wait">
                 {isSearchExpanded ? (
                     <motion.div
-                    key="search-bar"
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.2, ease: 'easeInOut' }}
-                    className={cn(
-                        "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md", // Keep max width for expanded state
-                        // Apply gradient background to expanded search bar
-                        "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
+                        key="search-bar"
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        className={cn(
+                            "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-md", // Max width for expanded state
+                            // Apply gradient background to expanded search bar
+                            "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
                         )}
                     >
                     <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
@@ -221,14 +240,13 @@ export default function Home() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
-                        // No extra class needed for positioning here
-                        >
+                     >
+                         {/* Adjusted class for size and gradient */}
                         <Button
                             variant="ghost"
                             size="icon"
                             className={cn(
                                 "rounded-full backdrop-blur-sm shadow border border-border h-10 w-10", // Explicit size
-                                // Apply gradient background to search trigger button
                                 "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white"
                             )}
                             onClick={() => setIsSearchExpanded(true)}
@@ -240,6 +258,10 @@ export default function Home() {
                 )}
                 </AnimatePresence>
             </div>
+           {/* Quick Add Form takes full width within the centered container */}
+           <div className="w-full">
+             <QuickAddEventForm onAddEvent={handleAddEvent} />
+           </div>
          </div>
        </div>
 
@@ -250,7 +272,7 @@ export default function Home() {
         onOpenChange={setIsEditDialogOpen}
         onEditEvent={handleEditEvent}
       />
-      {/* Keep Toaster component in case it's needed elsewhere, even though we removed specific toasts here */}
+      {/* Keep Toaster component in case it's needed elsewhere */}
       <Toaster />
     </main>
   );
