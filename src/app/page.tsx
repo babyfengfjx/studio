@@ -102,13 +102,13 @@ export default function Home() {
     };
    }, []);
 
-    // Function to close search and reset filters
-    const closeAndResetSearch = () => {
+    // Function to close search and reset filters (Wrap in useCallback)
+    const closeAndResetSearch = React.useCallback(() => {
         setIsSearchExpanded(false);
         setSearchTerm('');
         setSelectedEventType('all');
         setSelectedDateFilter('all');
-    };
+    }, [setIsSearchExpanded, setSearchTerm, setSelectedEventType, setSelectedDateFilter]); // Add dependencies
 
     // Effect to handle clicks outside the expanded search area
     React.useEffect(() => {
@@ -132,7 +132,7 @@ export default function Home() {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isSearchExpanded]); // Depend only on isSearchExpanded
+    }, [isSearchExpanded, closeAndResetSearch]); // Include closeAndResetSearch in dependencies
 
     // Effect to handle Escape key press to close search
     React.useEffect(() => {
@@ -151,7 +151,7 @@ export default function Home() {
         return () => {
           document.removeEventListener('keydown', handleKeyDown);
         };
-      }, [isSearchExpanded]); // Depend only on isSearchExpanded
+      }, [isSearchExpanded, closeAndResetSearch]); // Include closeAndResetSearch in dependencies
 
 
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
