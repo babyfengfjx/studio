@@ -179,7 +179,7 @@ export default function Home() {
        <div className="fixed bottom-[110px] left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4 flex justify-center items-center h-16"> {/* Adjusted bottom position */}
          {/* Timeline Connector Line (Visible when search is NOT expanded) */}
          {!isSearchExpanded && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full mb-[-4px]"></div> {/* Adjusted height and margin */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-purple-400 to-purple-400 rounded-b-full mb-[-4px]"></div> /* Adjusted height and margin */
          )}
          <AnimatePresence mode="wait">
            {isSearchExpanded ? (
@@ -262,3 +262,4 @@ export default function Home() {
     </main>
   );
 }
+
