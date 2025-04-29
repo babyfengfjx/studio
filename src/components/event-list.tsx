@@ -3,13 +3,13 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit, Trash2, CalendarCheck, Image as ImageIcon, StickyNote, CheckSquare } from 'lucide-react'; // Removed Paperclip
+import { Edit, Trash2, CalendarCheck, Image as ImageIcon, StickyNote, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card'; // Removed CardFooter, CardHeader
+import { Card, CardContent } from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,24 +67,47 @@ const FormattedTimestamp: React.FC<{ timestamp: Date; formatString?: string }> =
     const [formattedDate, setFormattedDate] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        setFormattedDate(format(timestamp, formatString, { locale: zhCN }));
+        // Attempt to format the date, handle potential errors
+        try {
+          if (timestamp && !isNaN(timestamp.getTime())) {
+            setFormattedDate(format(timestamp, formatString, { locale: zhCN }));
+          } else {
+            setFormattedDate(null); // Set to null if timestamp is invalid
+          }
+        } catch (error) {
+          console.error("Error formatting date:", error, timestamp);
+          setFormattedDate(null); // Fallback on error
+        }
     }, [timestamp, formatString]); // Re-run if timestamp changes
 
     if (!formattedDate) {
-        try {
-            return <>{format(timestamp, formatString, { locale: zhCN })}</>;
-        } catch (e) {
-            return <span className="opacity-50">...</span>;
-        }
+        // Fallback if state is null or initial render before useEffect
+        return <span className="opacity-50">...</span>;
     }
     return <>{formattedDate}</>;
 };
+
+
+// Define a palette of gradient classes using chart colors for list items
+const dateGradients = [
+    'from-chart-1/10 to-chart-2/10',
+    'from-chart-2/10 to-chart-3/10',
+    'from-chart-3/10 to-chart-4/10',
+    'from-chart-4/10 to-chart-5/10',
+    'from-chart-5/10 to-chart-1/10',
+];
+
 
 export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventId }: EventListProps) {
   const [eventToDelete, setEventToDelete] = React.useState<TimelineEvent | null>(null);
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = React.useState<string | null>(null);
-  const [hoveredEventId, setHoveredEventId] = React.useState<string | null>(null); // Track hovered event
+  const [hoveredEventId, setHoveredEventId] = React.useState<string | null>(null);
+
+  // Map to store assigned gradient for each date string ('yyyy-MM-dd')
+  const dateColorMap = React.useRef(new Map<string, string>());
+  // Counter to cycle through the gradient palette
+  const colorIndex = React.useRef(0);
 
   const handleImageClick = (imageUrl: string) => {
     setSelectedImageUrl(imageUrl);
@@ -107,7 +130,25 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
             ) : (
                 events.map((event) => {
                 const isNewlyAdded = event.id === newlyAddedEventId;
-                const isHovered = hoveredEventId === event.id; // Check if the current event is hovered
+                const isHovered = hoveredEventId === event.id;
+
+                 // Determine the color for the current day
+                 let dailyGradientClass = 'from-background to-background'; // Default gradient
+                 try {
+                    if (event.timestamp && !isNaN(event.timestamp.getTime())) {
+                        const eventDateString = format(event.timestamp, 'yyyy-MM-dd');
+                        if (!dateColorMap.current.has(eventDateString)) {
+                            dateColorMap.current.set(eventDateString, dateGradients[colorIndex.current % dateGradients.length]);
+                            colorIndex.current++;
+                        }
+                        dailyGradientClass = dateColorMap.current.get(eventDateString) || dateGradients[0]; // Fallback gradient
+                    }
+                 } catch (error) {
+                     console.error("Error calculating date gradient for event:", event.id, error);
+                     // Keep the default gradient on error
+                 }
+
+
                 return (
                     <motion.div
                     key={event.id}
@@ -125,22 +166,22 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                         damping: 30,
                         ...(isNewlyAdded ? highlightAnimation.transition : {}),
                      }}
-                     onMouseEnter={() => setHoveredEventId(event.id)} // Set hovered ID on mouse enter
-                     onMouseLeave={() => setHoveredEventId(null)} // Clear hovered ID on mouse leave
-                     className="relative" // Add relative positioning for absolute positioned actions
+                     onMouseEnter={() => setHoveredEventId(event.id)}
+                     onMouseLeave={() => setHoveredEventId(null)}
+                     className="relative"
                     >
-                    {/* Action Buttons Container - Positioned above the card */}
+                    {/* Action Buttons Container */}
                     <AnimatePresence>
                         {isHovered && (
                             <motion.div
                                 initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                                animate={{ opacity: 1, y: -15, scale: 1 }} // Move up slightly less than timeline
+                                animate={{ opacity: 1, y: -15, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.8 }}
                                 transition={{ type: 'spring', stiffness: 400, damping: 15, duration: 0.2 }}
                                 className={cn(
                                     "absolute left-1/2 -translate-x-1/2 top-0 z-20 flex space-x-1 p-1 rounded-full bg-background shadow-lg border border-border/50",
                                 )}
-                                style={{ marginTop: '-5px' }} // Offset slightly above the card
+                                style={{ marginTop: '-5px' }}
                             >
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -200,9 +241,10 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
 
                     {/* Event Card */}
                     <Card className={cn(
-                        "shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden", // Removed group class
+                        "shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden",
                         isNewlyAdded && "border-2 border-primary",
-                        "bg-gradient-to-br from-card via-secondary/10 to-accent/10 dark:from-card dark:via-secondary/5 dark:to-accent/5" // Add gradient
+                        "bg-gradient-to-br", // Apply gradient
+                        dailyGradientClass // Use the day's gradient
                     )}>
                         <CardContent className="p-3 text-sm text-foreground relative">
                              {/* Top Right Corner: Timestamp */}
@@ -213,13 +255,13 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                             </div>
 
                             {/* Type Icon and Derived Title */}
-                            <div className="flex items-center gap-2 mb-2 pr-16"> {/* Adjust padding-right if needed */}
+                            <div className="flex items-start gap-2 mb-2 pr-16"> {/* Changed to items-start */}
                                {getEventTypeIcon(event.eventType)}
-                               <span className="text-base font-medium truncate flex-1">{deriveTitle(event.description)}</span>
+                               {/* Removed derived title display */}
+                               <p className="whitespace-pre-wrap flex-1 pt-0.5">{event.description}</p> {/* Description takes full width */}
                             </div>
 
-                            {/* Main Content (Description and Image) */}
-                            {event.description && <p className="whitespace-pre-wrap mb-2">{event.description}</p>}
+                            {/* Image - Moved outside the text flow */}
                             {event.imageUrl && (
                                 <DialogTrigger asChild>
                                 <button
@@ -238,7 +280,6 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
                                 </DialogTrigger>
                             )}
                         </CardContent>
-                         {/* Removed CardFooter for Attachment */}
                     </Card>
                     </motion.div>
                 );
@@ -265,14 +306,4 @@ export function EventList({ events, onEditEvent, onDeleteEvent, newlyAddedEventI
   );
 }
 
-// Function to derive title from description (moved from page.tsx for reuse)
-const deriveTitle = (description?: string): string => {
-    if (!description) return '新事件'; // Default title if no description
-    const lines = description.split('\n');
-    const firstLine = lines[0].trim();
-    if (firstLine) {
-        return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
-    }
-    const snippet = description.trim().substring(0, 50);
-    return snippet.length === 50 ? snippet + '...' : (snippet || '新事件');
-};
+// Removed deriveTitle function as it's no longer used
