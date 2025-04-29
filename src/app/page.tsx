@@ -2,23 +2,26 @@
 'use client';
 
 import * as React from 'react';
-import { Search, X, Brain, Loader2 } from 'lucide-react'; // Import Brain and Loader2 icons for AI
+import { Search, X, Brain, Loader2, List, Rows } from 'lucide-react'; // Import view icons
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timeline } from '@/components/timeline';
+import { EventList } from '@/components/event-list'; // Import EventList component
 import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar';
 import { FilterControls } from '@/components/filter-controls';
 import { QuickAddEventForm } from '@/components/quick-add-event-form';
+import { AuthControls } from '@/components/auth/auth-controls'; // Import AuthControls
 import { mockEvents } from '@/data/mock-events';
-import type { TimelineEvent, EventType } from '@/types/event';
+import type { TimelineEvent, EventType, ViewMode } from '@/types/event'; // Add ViewMode type
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs for view switching
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { summarizeEvents } from '@/ai/flows/summarize-events-flow'; // Import AI flow function
 import type { SummarizeEventsInput } from '@/ai/schemas/summarize-events-schema'; // Import AI input type from new schema file
 import type { TimelineEventInput } from '@/ai/schemas/event-schema'; // Import AI schema type for event mapping
-
+import { useAuth } from '@/context/auth-context'; // Import useAuth
 
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
@@ -53,6 +56,7 @@ const deriveTitle = (description?: string): string => {
 
 
 export default function Home() {
+  const { user } = useAuth(); // Get user from auth context
   const [allEvents, setAllEvents] = React.useState<TimelineEvent[]>([]); // Store all events
   const [editingEvent, setEditingEvent] = React.useState<TimelineEvent | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -65,14 +69,15 @@ export default function Home() {
   const [bottomPadding, setBottomPadding] = React.useState(0); // Initial bottom padding, will be calculated
   const { toast } = useToast(); // Initialize toast hook
   const [isAiLoading, setIsAiLoading] = React.useState(false); // State for AI loading
-
+  const [viewMode, setViewMode] = React.useState<ViewMode>('timeline'); // State for view mode
 
    // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
     setIsClient(true);
-    // Load and sort mock data into allEvents, ensuring newest are first
+    // TODO: Replace mock data loading with fetching user-specific data if logged in
+    // For now, always load mock data
     setAllEvents(sortEventsDescending(mockEvents));
-  }, []);
+  }, [user]); // Reload data if user changes (login/logout)
 
    // Calculate bottom padding based on quick add form height
    React.useEffect(() => {
@@ -112,22 +117,34 @@ export default function Home() {
 
   // Updated handleAddEvent: Title is derived from description
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
+     // TODO: If user is logged in, save to user's data store (e.g., Firestore)
+     // If not logged in, add to local state (current behavior)
+     console.log("Adding event (User:", user ? user.uid : "Guest", ")");
+
      const derivedTitle = deriveTitle(newEventData.description);
     const newEvent: TimelineEvent = {
-      id: crypto.randomUUID(), // Generate a unique ID
+      id: crypto.randomUUID(), // Generate a unique ID (replace with DB ID if saving)
       timestamp: new Date(), // Set timestamp to current time
       title: derivedTitle, // Derive title from description
       description: newEventData.description, // Full description
       eventType: newEventData.eventType,
       imageUrl: newEventData.imageUrl,
       attachment: newEventData.attachment,
+      // userId: user?.uid // Associate with user if logged in
     };
     // Add new event and resort descending (newest first)
     setAllEvents((prevEvents) => {
         const updatedEvents = sortEventsDescending([...prevEvents, newEvent]);
         // Ensure scroll happens *after* state update is likely processed by React
         requestAnimationFrame(() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+             if (viewMode === 'timeline') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+             }
+             // Optionally scroll to top in list view as well
+             // else if (viewMode === 'list') {
+             //    const listContainer = document.getElementById('event-list-container'); // Assuming list has an ID
+             //    if (listContainer) listContainer.scrollTo({ top: 0, behavior: 'smooth' });
+             // }
         });
         // Set the ID for highlighting
         setNewlyAddedEventId(newEvent.id);
@@ -138,6 +155,8 @@ export default function Home() {
   };
 
   const handleDeleteEvent = (id: string) => {
+    // TODO: Implement deletion from user's data store if logged in
+    console.log("Deleting event:", id, "(User:", user ? user.uid : "Guest", ")");
     const eventToDelete = allEvents.find(e => e.id === id);
     // Filter out the event and resort (though filtering doesn't change order)
     setAllEvents((prevEvents) => sortEventsDescending(prevEvents.filter((event) => event.id !== id)));
@@ -152,6 +171,9 @@ export default function Home() {
   // Function to handle the actual edit submission
   // Accepts Partial update data
  const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
+     // TODO: Implement update in user's data store if logged in
+     console.log("Editing event:", id, "(User:", user ? user.uid : "Guest", ")");
+
      const originalEvent = allEvents.find(e => e.id === id);
      if (!originalEvent) return; // Guard clause
 
@@ -249,6 +271,11 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
+       {/* Authentication Controls - Top Right */}
+       <div className="absolute top-4 right-4 z-50">
+         <AuthControls />
+       </div>
+
       {/* Main Content Area - Adjust bottom padding dynamically */}
        <div
           className="container mx-auto px-4 w-full max-w-4xl flex-1" // Use flex-1 to take available space
@@ -256,24 +283,54 @@ export default function Home() {
        >
         <h1 className="text-4xl font-bold text-center my-8 text-foreground">时光流</h1> {/* Title in Chinese, added margin */}
 
-        {/* Timeline Section */}
+        {/* View Mode Toggle */}
+        <div className="flex justify-center mb-6">
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-auto">
+                <TabsList>
+                    <TabsTrigger value="timeline" className="px-4 py-2 flex items-center gap-2">
+                        <Rows className="h-4 w-4" /> 时间轴
+                    </TabsTrigger>
+                    <TabsTrigger value="list" className="px-4 py-2 flex items-center gap-2">
+                        <List className="h-4 w-4" /> 列表
+                    </TabsTrigger>
+                </TabsList>
+            </Tabs>
+        </div>
+
+
+        {/* Content Display based on viewMode */}
         <div className="mt-0">
-             <Timeline
-              events={filteredEvents} // Pass filtered events
-              onEditEvent={handleOpenEditDialog} // Pass handler to open edit dialog
-              onDeleteEvent={handleDeleteEvent}
-              newlyAddedEventId={newlyAddedEventId} // Pass the ID for highlighting
-             />
+             {viewMode === 'timeline' && (
+                <Timeline
+                 events={filteredEvents} // Pass filtered events
+                 onEditEvent={handleOpenEditDialog} // Pass handler to open edit dialog
+                 onDeleteEvent={handleDeleteEvent}
+                 newlyAddedEventId={newlyAddedEventId} // Pass the ID for highlighting
+                />
+             )}
+             {viewMode === 'list' && (
+                <EventList
+                 events={filteredEvents}
+                 onEditEvent={handleOpenEditDialog}
+                 onDeleteEvent={handleDeleteEvent}
+                 newlyAddedEventId={newlyAddedEventId}
+                />
+             )}
         </div>
       </div>
 
        {/* Quick Add Event Form & Search - Fixed container at the bottom */}
-       <div ref={quickAddFormRef} className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-transparent pointer-events-none">
+       <div ref={quickAddFormRef} className="fixed bottom-0 left-0 right-0 z-40 bg-transparent pointer-events-none">
          {/* Container for centering content within the fixed area */}
-         <div className="container mx-auto max-w-4xl relative pointer-events-auto">
+         <div className="container mx-auto max-w-4xl relative pointer-events-auto p-4"> {/* Added padding here */}
            {/* Quick Add Form takes full width within the centered container */}
            <div className="w-full">
-             <QuickAddEventForm onAddEvent={handleAddEvent} />
+              {/* Only show quick add if user is logged in OR if guest usage is allowed */}
+              {user ? (
+                 <QuickAddEventForm onAddEvent={handleAddEvent} />
+              ) : (
+                 <div className="text-center text-muted-foreground p-4 bg-muted rounded-lg">请登录后添加事件。</div>
+              )}
            </div>
            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely ABOVE the quick add form */}
              <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, mb-2 for spacing */}
@@ -306,7 +363,7 @@ export default function Home() {
                             isAiLoading && "animate-spin" // Add spin animation when loading
                         )}
                         onClick={handleAiSummarize}
-                        disabled={isAiLoading || !searchTerm.trim()} // Disable if loading or search term is empty
+                        disabled={isAiLoading || !searchTerm.trim() || !user} // Disable if loading, no query, or no user
                         aria-label="AI 总结"
                       >
                         {isAiLoading ? <Loader2 className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
@@ -363,4 +420,3 @@ export default function Home() {
     </main>
   );
 }
-

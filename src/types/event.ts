@@ -1,5 +1,6 @@
 
 export type EventType = 'note' | 'todo' | 'schedule';
+export type ViewMode = 'timeline' | 'list'; // Add ViewMode type
 
 export interface TimelineEvent {
   id: string;
@@ -12,4 +13,5 @@ export interface TimelineEvent {
     name: string;
     // url?: string; // Keep URL optional/removed if not needed for core functionality
   };
+  userId?: string; // Optional: Associate event with a user
 }

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Using Inter as a clean sans-serif font
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
+import { AuthProvider } from '@/context/auth-context'; // Import AuthProvider
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' }); // Define variable for Tailwind
 
@@ -21,8 +22,10 @@ export default function RootLayout({
     <html lang="zh-CN">
       {/* Apply the font variable to the body */}
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
-        <Toaster /> {/* Add Toaster here */}
+        <AuthProvider> {/* Wrap children with AuthProvider */}
+          {children}
+          <Toaster /> {/* Add Toaster here */}
+        </AuthProvider>
       </body>
     </html>
   );
