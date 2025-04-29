@@ -5,8 +5,10 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags, Upload, Paperclip } from "lucide-react"; // Removed Paperclip
+import { Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags, Upload, CalendarIcon, Clock } from "lucide-react";
 import { motion } from 'framer-motion';
+import { format, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +38,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Import Popover
+import { Calendar } from "@/components/ui/calendar"; // Import Calendar
 import type { TimelineEvent, EventType } from "@/types/event";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +71,7 @@ const deriveTitle = (description?: string): string => {
 // Title is removed from validation
 // Attachment field is removed
 const formSchema = z.object({
+  timestamp: z.date({ required_error: "请选择日期和时间。" }), // Add timestamp validation
   eventType: z.enum(EVENT_TYPES, { required_error: "请选择事件类型。" }), // Add eventType validation
   description: z.string().max(500, { message: "描述不能超过500个字符。" }).optional(), // Keep description validation
   image: z.any() // Use z.any() for FileList compatibility with SSR
@@ -85,7 +90,6 @@ const formSchema = z.object({
         },
         "只允许上传 JPG, PNG, WEBP, GIF 格式的图片。"
     ),
-  // attachment field removed
 });
 
 
@@ -94,88 +98,78 @@ type EditEventFormProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   // Attachment removed from TimelineEvent Omit
-  onEditEvent: (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>>) => void; // Title removed from type constraint
+  // Timestamp is added to allow updating it
+  onEditEvent: (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'title'>>) => void;
 };
 
 export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: EditEventFormProps) {
    // Store initial values separately to manage preview states
    const [initialImageUrl, setInitialImageUrl] = React.useState<string | undefined>(undefined);
-   // Removed initialAttachmentName state
    const [imageFileName, setImageFileName] = React.useState<string | null>(null); // State for selected image file name
-   // Removed attachmentName state
    // Flags to track if the user wants to clear existing files
    const [clearExistingImage, setClearExistingImage] = React.useState(false);
-   // Removed clearExistingAttachment state
    // State to control visibility of optional fields
    const [showTypeSelect, setShowTypeSelect] = React.useState(true); // Default to true for edit
    const [showImageUpload, setShowImageUpload] = React.useState(false);
-   // Removed showAttachmentUpload state
+   const [showDateTimePicker, setShowDateTimePicker] = React.useState(false); // State for date/time picker visibility
 
    const imageInputRef = React.useRef<HTMLInputElement>(null);
-   // Removed attachmentInputRef
+   const [calendarOpen, setCalendarOpen] = React.useState(false); // State for calendar popover
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     // Default values will be set in useEffect
     defaultValues: {
-      eventType: 'note', // Default, will be overridden
+      timestamp: new Date(), // Default, will be overridden
+      eventType: 'note',
       description: "",
       image: undefined,
-      // attachment removed
     },
   });
 
-  // Removed attachmentFile watcher
   const imageFile = form.watch("image");
   const descriptionValue = form.watch("description"); // Watch description for title display in header
+  const currentTimestamp = form.watch("timestamp"); // Watch timestamp for time inputs
 
  // Reset form and manage visibility when the event prop changes or dialog opens/closes
  React.useEffect(() => {
     if (event && isOpen) {
         form.reset({
+            timestamp: event.timestamp, // Set initial timestamp
             eventType: event.eventType,
             description: event.description ?? "",
             image: undefined, // Reset file inputs on open
-            // attachment removed
         });
         // Set initial values for display/clearing logic
         setInitialImageUrl(event.imageUrl);
-        // Removed setInitialAttachmentName
-        // Removed setAttachmentName
         setImageFileName(null); // Reset selected image file name
 
         // Decide initial visibility based on whether the event HAS these properties
         setShowTypeSelect(true); // Keep type always visible/toggleable for editing
         setShowImageUpload(!!event.imageUrl); // Show if there IS an image
-        // Removed setShowAttachmentUpload logic
+        setShowDateTimePicker(true); // Always show date/time for editing
 
         // Reset clearing flags
         setClearExistingImage(false);
-        // Removed setClearExistingAttachment
 
     } else if (!isOpen) {
         // Reset everything when dialog closes
          form.reset({
+            timestamp: new Date(),
             eventType: 'note',
             description: "",
             image: undefined,
-            // attachment removed
         });
         setInitialImageUrl(undefined);
-        // Removed setInitialAttachmentName
-        // Removed setAttachmentName
         setImageFileName(null);
         setClearExistingImage(false);
-        // Removed setClearExistingAttachment
         // Reset visibility toggles
-        setShowTypeSelect(true); // Reset to default visibility state for edit
+        setShowTypeSelect(true);
         setShowImageUpload(false);
-        // Removed setShowAttachmentUpload(false);
+        setShowDateTimePicker(false); // Hide by default when closed
     }
  }, [event, isOpen, form]);
 
-
- // Removed useEffect for attachment name display
 
     // Update image file name display
     React.useEffect(() => {
@@ -186,12 +180,11 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                 setClearExistingImage(false);
             } else {
                 setImageFileName(null); // Clear name if file is invalid
-                // form.setValue("image", undefined); // Consider clearing invalid file
             }
         } else {
             setImageFileName(null); // Clear name if no file is selected
         }
-    }, [imageFile, form]); // Removed initialAttachmentName, clearExistingAttachment deps
+    }, [imageFile, form]);
 
 
 
@@ -199,7 +192,8 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     if (!event) return;
 
     // Title is no longer explicitly managed or derived here for submission
-    const updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> = { // Title and attachment removed from type
+    const updatedData: Partial<Omit<TimelineEvent, 'id' | 'title'>> = { // Title removed from type
+        timestamp: values.timestamp, // Include timestamp
         eventType: values.eventType, // Include event type in update
         description: values.description,
     };
@@ -220,9 +214,6 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     } // If neither new image nor clear flag, existing imageUrl remains implicitly unchanged
 
 
-     // Removed Attachment handling logic
-
-
     onEditEvent(event.id, updatedData);
     onOpenChange(false); // Close the dialog
   }
@@ -241,12 +232,27 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         if (imageInputRef.current) imageInputRef.current.value = ""; // Reset input element
    };
 
-    // Removed handleClearAttachment function
 
   if (!event) return null; // Don't render the dialog if no event is selected
 
   // Derive title for display purposes in the Dialog Header based on current description form value
   const displayTitle = deriveTitle(descriptionValue);
+
+  const handleTimeChange = (type: 'hour' | 'minute', value: string) => {
+    const numericValue = parseInt(value, 10);
+    if (!isNaN(numericValue)) {
+        let newDate = currentTimestamp;
+        if (type === 'hour' && numericValue >= 0 && numericValue <= 23) {
+            newDate = setHours(newDate, numericValue);
+        } else if (type === 'minute' && numericValue >= 0 && numericValue <= 59) {
+            newDate = setMinutes(newDate, numericValue);
+        }
+        newDate = setSeconds(newDate, 0); // Reset seconds/ms for simplicity
+        newDate = setMilliseconds(newDate, 0);
+        form.setValue("timestamp", newDate, { shouldValidate: true });
+    }
+};
+
 
   return (
     <TooltipProvider>
@@ -255,7 +261,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
             <DialogHeader>
             <DialogTitle className="truncate pr-8">{displayTitle}</DialogTitle>
             <DialogDescription>
-                 更新事件详情。点击下方图标编辑类型或图片。 {/* Updated Description */}
+                 更新事件详情。点击下方图标编辑类型、图片或时间。 {/* Updated Description */}
             </DialogDescription>
             </DialogHeader>
             {/* Form container scrolls */}
@@ -283,6 +289,96 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                     />
 
                     {/* --- Conditionally Rendered Fields --- */}
+
+                     {/* Date/Time Picker */}
+                     {showDateTimePicker && (
+                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                             <FormField
+                                 control={form.control}
+                                 name="timestamp"
+                                 render={({ field }) => (
+                                     <FormItem className="flex flex-col mt-4">
+                                         <FormLabel>事件时间</FormLabel>
+                                         <div className="flex items-center gap-2">
+                                            {/* Date Picker Popover */}
+                                            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                                <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "w-[180px] pl-3 text-left font-normal", // Adjusted width
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                        >
+                                                        {field.value ? (
+                                                            format(field.value, "yyyy年M月d日", { locale: zhCN }) // Format date
+                                                        ) : (
+                                                            <span>选择日期</span>
+                                                        )}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={(date) => {
+                                                        if (date) {
+                                                            // Preserve time when changing date
+                                                            const currentHour = field.value.getHours();
+                                                            const currentMinute = field.value.getMinutes();
+                                                            let newDate = setHours(date, currentHour);
+                                                            newDate = setMinutes(newDate, currentMinute);
+                                                            newDate = setSeconds(newDate, 0);
+                                                            newDate = setMilliseconds(newDate, 0);
+                                                            field.onChange(newDate);
+                                                        } else {
+                                                            field.onChange(date);
+                                                        }
+                                                        setCalendarOpen(false); // Close calendar on select
+                                                    }}
+                                                    initialFocus
+                                                    locale={zhCN} // Set locale for calendar display
+                                                />
+                                                </PopoverContent>
+                                            </Popover>
+
+                                            {/* Time Input */}
+                                            <div className="flex items-center gap-1">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="23"
+                                                        value={format(field.value, 'HH')}
+                                                        onChange={(e) => handleTimeChange('hour', e.target.value)}
+                                                        className="w-14 h-9 text-center px-1" // Adjusted size
+                                                        aria-label="小时"
+                                                    />
+                                                </FormControl>
+                                                <span>:</span>
+                                                 <FormControl>
+                                                     <Input
+                                                         type="number"
+                                                         min="0"
+                                                         max="59"
+                                                         value={format(field.value, 'mm')}
+                                                         onChange={(e) => handleTimeChange('minute', e.target.value)}
+                                                         className="w-14 h-9 text-center px-1" // Adjusted size
+                                                         aria-label="分钟"
+                                                     />
+                                                 </FormControl>
+                                            </div>
+                                         </div>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )}
+                                />
+                            </motion.div>
+                     )}
+
 
                     {/* Event Type Selection */}
                     {showTypeSelect && (
@@ -371,7 +467,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                                                 className="hidden" // Hide the default input
                                                 ref={imageInputRef} // Assign ref
                                                 onChange={(e) => {
-                                                    form.setValue("image", e.target.files); // Update form state correctly
+                                                    field.onChange(e.target.files); // Update form state correctly using field.onChange
                                                 }}
                                                 onBlur={field.onBlur}
                                                 name={field.name}
@@ -388,7 +484,6 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                         </motion.div>
                     )}
 
-                    {/* Removed Attachment Upload Section */}
 
                      {/* This empty div ensures the footer doesn't overlap last form item */}
                      <div className="h-1"></div>
@@ -399,6 +494,23 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
             {/* Action Icons & Footer - Placed outside the scrolling container */}
              <DialogFooter className="pt-4 border-t sticky bottom-0 bg-background px-6 pb-6 -mx-6 -mb-6 mt-auto"> {/* Adjust padding */}
                 <div className="flex items-center gap-2 w-full">
+                     <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowDateTimePicker(!showDateTimePicker)}
+                                className={cn("text-muted-foreground", showDateTimePicker && "bg-accent text-accent-foreground")}
+                                aria-label="编辑事件时间"
+                            >
+                                <Clock className="h-5 w-5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>编辑事件时间</p>
+                        </TooltipContent>
+                    </Tooltip>
                      <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -433,11 +545,10 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                              <p>{initialImageUrl ? "编辑图片" : "添加图片"}</p>
                         </TooltipContent>
                     </Tooltip>
-                    {/* Removed Attachment Tooltip/Button */}
                      <div className="flex-grow"></div> {/* Spacer */}
                     <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button>
                     {/* Trigger form submission via formRef */}
-                     <Button type="button" onClick={() => form.handleSubmit(onSubmit)()} disabled={!descriptionValue?.trim()}>保存更改</Button> {/* Disable save if description is empty */}
+                     <Button type="button" onClick={() => form.handleSubmit(onSubmit)()} disabled={!descriptionValue?.trim() && !imageFile && !initialImageUrl}>保存更改</Button> {/* Allow save if only image exists */}
                  </div>
              </DialogFooter>
         </DialogContent>
@@ -445,3 +556,5 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     </TooltipProvider>
   );
 }
+
+    

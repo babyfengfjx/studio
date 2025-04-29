@@ -21,7 +21,7 @@ export interface TimelineEvent {
   title: string; // Title is still present but often derived, not mandatory input
   description: string;
   imageUrl?: string;
-  // Removed userId field
-  // Removed attachment field
 }
 
+
+    

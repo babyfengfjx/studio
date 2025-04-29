@@ -42,7 +42,6 @@ const getEventTypeLabel = (eventType?: EventType): string => {
 };
 
 export default function Home() {
-  // Removed user state from useAuth
   const [allEvents, setAllEvents] = React.useState<TimelineEvent[]>([]); // Store all events
   const [editingEvent, setEditingEvent] = React.useState<TimelineEvent | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -65,7 +64,7 @@ export default function Home() {
     // Load initial data (e.g., from local storage, WebDAV, or start with mock)
     // TODO: Implement actual data loading/saving strategy (e.g., WebDAV sync)
     setAllEvents(sortEventsDescending(mockEvents));
-  }, []); // Removed user dependency
+  }, []);
 
    // Calculate bottom padding based on quick add form height
    React.useEffect(() => {
@@ -73,7 +72,7 @@ export default function Home() {
     const calculatePadding = () => {
         if (quickAddFormRef.current) {
             const formHeight = quickAddFormRef.current.offsetHeight;
-            setBottomPadding(formHeight + 16); // Form height + some buffer (p-4 = 16px)
+            setBottomPadding(formHeight); // Just use the form height
         } else {
             // Fallback or initial padding if ref not ready
             setBottomPadding(140); // Estimate default padding
@@ -100,15 +99,13 @@ export default function Home() {
             resizeObserver.unobserve(quickAddFormRef.current);
         }
     };
-   }, []); // Empty dependency array, runs once on mount and cleans up
+   }, []);
 
 
-  // handleAddEvent no longer needs to derive title here
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
      // TODO: Save to chosen data store (e.g., local state, trigger WebDAV save)
      console.log("Adding event");
 
-     // Title is now derived where it's displayed (Timeline, EventList) or edited (EditForm)
     const newEvent: TimelineEvent = {
       id: crypto.randomUUID(), // Generate a unique ID (replace with DB ID if saving)
       timestamp: new Date(), // Set timestamp to current time
@@ -116,7 +113,6 @@ export default function Home() {
       description: newEventData.description, // Full description
       eventType: newEventData.eventType,
       imageUrl: newEventData.imageUrl,
-      // Removed attachment
     };
     // Add new event and resort descending (newest first)
     setAllEvents((prevEvents) => {
@@ -154,16 +150,16 @@ export default function Home() {
     setIsEditDialogOpen(true);
   };
 
-  // handleEditEvent no longer needs to derive title here
- const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>>) => { // Title removed from type constraint
+  // Updated handleEditEvent to accept timestamp
+  const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'title'>>) => {
      // TODO: Implement update in chosen data store
      console.log("Editing event:", id);
 
      const originalEvent = allEvents.find(e => e.id === id);
      if (!originalEvent) return; // Guard clause
 
-     // Prepare the final update object - Title is handled within EditEventForm
-     const finalUpdatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>> = { ...updatedData };
+     // Prepare the final update object - includes potentially updated timestamp
+     const finalUpdatedData: Partial<Omit<TimelineEvent, 'id' | 'title'>> = { ...updatedData };
 
     setAllEvents((prevEvents) =>
       sortEventsDescending(prevEvents.map((event) =>
@@ -215,7 +211,6 @@ export default function Home() {
         const eventsForAi: TimelineEventInput[] = filteredEvents.map(event => ({
             ...event,
             timestamp: event.timestamp.toISOString(), // Convert Date to ISO string
-            // Removed attachment mapping
         }));
 
         setIsAiLoading(true);
@@ -314,87 +309,88 @@ export default function Home() {
          {/* Container for centering content within the fixed area */}
          <div className="container mx-auto max-w-4xl relative pointer-events-auto p-4"> {/* Added padding here */}
            {/* Quick Add Form takes full width within the centered container */}
-           <div className="w-full">
+           <div className="w-full relative"> {/* Make this relative for absolute positioning of search */}
               <QuickAddEventForm onAddEvent={handleAddEvent} />
+                {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely INSIDE the quick add form's relative parent */}
+                <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, mb-2 for spacing */}
+                    <AnimatePresence mode="wait">
+                    {isSearchExpanded ? (
+                        <motion.div
+                            key="search-bar"
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            transition={{ duration: 0.2, ease: 'easeInOut' }}
+                            className={cn(
+                                "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-lg", // Max width for expanded state
+                                "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
+                            )}
+                        >
+                            <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
+                            {/* Type Filter */}
+                            <FilterControls
+                                selectedType={selectedEventType}
+                                onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
+                                className="w-auto flex-shrink-0"
+                            />
+                            {/* Date Filter */}
+                            <DateFilterControls
+                                selectedFilter={selectedDateFilter}
+                                onFilterChange={setSelectedDateFilter}
+                                className="w-auto flex-shrink-0"
+                            />
+                            {/* AI Summarize Button */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    "h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-primary",
+                                    isAiLoading && "animate-spin" // Add spin animation when loading
+                                )}
+                                onClick={handleAiSummarize}
+                                disabled={isAiLoading || !searchTerm.trim()} // Disable if loading or no query
+                                aria-label="AI 总结"
+                            >
+                                {isAiLoading ? <Loader2 className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
+                            </Button>
+                            {/* Close Button */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
+                                onClick={() => setIsSearchExpanded(false)}
+                                aria-label="关闭搜索"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="search-trigger"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                            className="relative z-10 mb-[-10px]" // Adjusted positioning closer to form
+                        >
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    "rounded-full backdrop-blur-sm shadow border border-border h-10 w-10", // Explicit size
+                                    "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white"
+                                )}
+                                onClick={() => setIsSearchExpanded(true)}
+                                aria-label="打开搜索与筛选"
+                            >
+                                <Search className="h-5 w-5" />
+                            </Button>
+                        </motion.div>
+                    )}
+                    </AnimatePresence>
+                </div>
            </div>
-           {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely ABOVE the quick add form */}
-             <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, mb-2 for spacing */}
-                <AnimatePresence mode="wait">
-                {isSearchExpanded ? (
-                    <motion.div
-                        key="search-bar"
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2, ease: 'easeInOut' }}
-                        className={cn(
-                            "flex items-center gap-2 p-2 rounded-lg backdrop-blur-sm shadow-md border border-border w-full max-w-lg", // Max width for expanded state
-                            "bg-gradient-to-r from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800"
-                        )}
-                    >
-                        <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} className="flex-grow"/>
-                        {/* Type Filter */}
-                        <FilterControls
-                            selectedType={selectedEventType}
-                            onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
-                            className="w-auto flex-shrink-0"
-                        />
-                        {/* Date Filter */}
-                        <DateFilterControls
-                            selectedFilter={selectedDateFilter}
-                            onFilterChange={setSelectedDateFilter}
-                            className="w-auto flex-shrink-0"
-                         />
-                        {/* AI Summarize Button */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                                "h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-primary",
-                                isAiLoading && "animate-spin" // Add spin animation when loading
-                            )}
-                            onClick={handleAiSummarize}
-                            disabled={isAiLoading || !searchTerm.trim()} // Disable if loading or no query
-                            aria-label="AI 总结"
-                        >
-                            {isAiLoading ? <Loader2 className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
-                        </Button>
-                        {/* Close Button */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-foreground" // Adjusted text color
-                            onClick={() => setIsSearchExpanded(false)}
-                            aria-label="关闭搜索"
-                        >
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </motion.div>
-                ) : (
-                     <motion.div
-                        key="search-trigger"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
-                        className="relative z-10 mb-[-10px]" // Adjusted positioning
-                     >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                                "rounded-full backdrop-blur-sm shadow border border-border h-10 w-10", // Explicit size
-                                "bg-gradient-to-br from-blue-300 via-teal-300 to-purple-400 hover:opacity-90 text-white"
-                            )}
-                            onClick={() => setIsSearchExpanded(true)}
-                            aria-label="打开搜索与筛选"
-                        >
-                            <Search className="h-5 w-5" />
-                        </Button>
-                    </motion.div>
-                )}
-                </AnimatePresence>
-            </div>
+
          </div>
        </div>
 
@@ -419,3 +415,6 @@ export default function Home() {
     </main>
   );
 }
+
+
+    
