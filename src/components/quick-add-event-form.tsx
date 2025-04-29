@@ -48,6 +48,7 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const attachmentInputRef = React.useRef<HTMLInputElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null); // Ref for textarea
+  const formRef = React.useRef<HTMLFormElement>(null); // Ref for the form element
 
   // Handle image selection and preview
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,41 +106,33 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     }
   }, [description]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Define handleSubmit as useCallback to prevent recreation on every render
+  const handleSubmit = React.useCallback(async (e?: React.FormEvent) => {
+    if (e) e.preventDefault(); // Prevent default form submission if called from event
+
     const trimmedDescription = description.trim();
     if (!trimmedDescription) {
-        toast({ title: "内容不能为空", description: "请输入事件内容。", variant: "destructive" });
+        // Do not show toast, just prevent submission silently or give subtle feedback
+        // toast({ title: "内容不能为空", description: "请输入事件内容。", variant: "destructive" });
         return; // Prevent submission if input is empty
     }
-
-    // Title will be derived by the parent component from the description
-    // const lines = trimmedDescription.split('\n');
-    // const title = lines[0]; // Use the first line as title
-    // const fullDescription = trimmedDescription; // Use the full input as description
-
 
     let imageUrl: string | undefined = undefined;
     let attachmentData: TimelineEvent['attachment'] | undefined = undefined;
 
     // Process image if present
     if (imageFile) {
-        // Reuse the preview URL if available, otherwise generate one (should be generated on selection)
         imageUrl = imagePreviewUrl ?? undefined; // Use preview generated earlier
-        // In a real app, you'd likely upload here and get a URL
     }
 
     // Process attachment if present
     if (attachmentFile) {
-        // In a real app, upload the file here and get a URL
         attachmentData = { name: attachmentFile.name };
     }
 
-
     onAddEvent({
       eventType,
-      // title is removed - will be derived by parent
-      description: trimmedDescription, // Pass the full description
+      description: trimmedDescription,
       imageUrl,
       attachment: attachmentData,
     });
@@ -152,22 +145,33 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
     // Reset textarea height
     if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
+        textareaRef.current.focus(); // Optionally refocus textarea
     }
-  };
+  }, [description, eventType, imageFile, attachmentFile, imagePreviewUrl, onAddEvent, toast]); // Include all dependencies
+
+
+   // Handle Ctrl+Enter / Cmd+Enter submission
+   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault(); // Prevent default Enter behavior (newline)
+        handleSubmit(); // Call the memoized handleSubmit
+      }
+   };
+
 
   return (
     <TooltipProvider>
-      {/* Use Card for better structure and styling in fixed position */}
       {/* Apply gradient background */}
       <Card className="shadow-md overflow-hidden border-0 rounded-lg bg-gradient-to-br from-blue-100 via-teal-100 to-purple-200 dark:from-blue-800 dark:via-teal-800 dark:to-purple-800">
-        <form onSubmit={handleSubmit}>
+        <form ref={formRef} onSubmit={handleSubmit}> {/* Add ref to form */}
           <CardContent className="p-3 space-y-2 pb-1"> {/* Adjusted bottom padding */}
             {/* Combined Input field for description */}
              <Textarea
               ref={textareaRef} // Add ref
-              placeholder="记录您的想法、任务或日程..." // Unified placeholder
+              placeholder="记录您的想法、任务或日程... (Ctrl+Enter 提交)" // Updated placeholder
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onKeyDown={handleKeyDown} // Add keydown listener
               className={cn(
                   "w-full resize-none border-0 shadow-none focus-visible:ring-0 text-base p-1 placeholder-muted-foreground/70 overflow-hidden", // Added overflow-hidden
                   "bg-transparent transition-all duration-200 ease-in-out", // Transparent background
@@ -186,9 +190,9 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                     <Image
                         src={imagePreviewUrl}
                         alt="图片预览"
-                        layout="fill"
-                        objectFit="cover"
+                        fill // Use fill instead of layout="fill"
                         sizes="64px" // Add sizes attribute
+                        className="object-cover" // Add object-cover
                     />
                     <Button
                     type="button"
@@ -223,9 +227,10 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
             </div>
           </CardContent>
 
-          {/* Card Footer now only contains the submit button */}
-          <CardFooter className="bg-muted/30 p-2 flex items-center justify-between gap-1 border-t border-border/20">
-                <div className="flex items-center gap-0.5"> {/* Reduced gap */}
+          {/* Card Footer now contains actions and search trigger */}
+           <CardFooter className="bg-muted/30 p-2 flex items-center justify-between gap-1 border-t border-border/20 relative"> {/* Added relative positioning */}
+                {/* Action Icons Group */}
+                <div className="flex items-center gap-0.5 flex-grow"> {/* Reduced gap, flex-grow */}
                     {/* Event Type Select */}
                     <Select value={eventType} onValueChange={(value) => setEventType(value as EventType)}>
                         <Tooltip>
@@ -261,52 +266,56 @@ export function QuickAddEventForm({ onAddEvent }: QuickAddEventFormProps) {
                         </SelectContent>
                     </Select>
 
-                {/* Image Upload Trigger */}
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
-                        onClick={() => imageInputRef.current?.click()}
-                        aria-label="添加图片"
-                    >
-                        <ImageIcon className="h-4 w-4" /> {/* Smaller icon */}
-                    </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                    <p>添加图片</p>
-                    </TooltipContent>
-                </Tooltip>
+                    {/* Image Upload Trigger */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
+                            onClick={() => imageInputRef.current?.click()}
+                            aria-label="添加图片"
+                        >
+                            <ImageIcon className="h-4 w-4" /> {/* Smaller icon */}
+                        </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                        <p>添加图片</p>
+                        </TooltipContent>
+                    </Tooltip>
 
-                {/* Attachment Upload Trigger */}
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
-                        onClick={() => attachmentInputRef.current?.click()}
-                        aria-label="添加附件"
-                    >
-                        <Paperclip className="h-4 w-4" /> {/* Smaller icon */}
-                    </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                    <p>添加附件</p>
-                    </TooltipContent>
-                </Tooltip>
+                    {/* Attachment Upload Trigger */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground" // Smaller button, hover effect
+                            onClick={() => attachmentInputRef.current?.click()}
+                            aria-label="添加附件"
+                        >
+                            <Paperclip className="h-4 w-4" /> {/* Smaller icon */}
+                        </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                        <p>添加附件</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
 
+                 {/* Search Trigger Button - Positioned absolutely in the center */}
+                 {/* <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <SearchTriggerButton /> Place the SearchTriggerButton component here
+                 </div> */}
 
-            {/* Submit Button */}
-             {/* Submit Button - Use gradient and move to the right */}
+
+            {/* Submit Button - Use gradient and move to the right */}
             <Button
                 type="submit"
                 size="sm"
-                className="h-7 px-3 bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white"
+                className="h-7 px-3 bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white flex-shrink-0" // Added flex-shrink-0
                 disabled={!description.trim()} // Disable if description is empty
             >
               <Send className="h-4 w-4 mr-1" /> 添加
