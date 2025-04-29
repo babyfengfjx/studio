@@ -2,8 +2,8 @@
 'use client';
 
 import * as React from 'react';
-import { Search, X } from 'lucide-react'; // Import Search and X icons
-import { motion, AnimatePresence } from 'framer-motion'; // Import motion components
+import { Search, X, Brain, Loader2 } from 'lucide-react'; // Import Brain and Loader2 icons for AI
+import { motion, AnimatePresence } from 'framer-motion';
 import { Timeline } from '@/components/timeline';
 import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar';
@@ -11,9 +11,14 @@ import { FilterControls } from '@/components/filter-controls';
 import { QuickAddEventForm } from '@/components/quick-add-event-form';
 import { mockEvents } from '@/data/mock-events';
 import type { TimelineEvent, EventType } from '@/types/event';
-import { Button } from '@/components/ui/button'; // Import Button
-import { Toaster } from "@/components/ui/toaster"; // Keep toaster for potential other uses
-import { cn } from '@/lib/utils'; // Import cn utility
+import { Button } from '@/components/ui/button';
+import { Toaster } from "@/components/ui/toaster";
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { summarizeEvents } from '@/ai/flows/summarize-events-flow'; // Import AI flow function
+import type { SummarizeEventsInput } from '@/ai/schemas/summarize-events-schema'; // Import AI input type from new schema file
+import type { TimelineEventInput } from '@/ai/schemas/event-schema'; // Import AI schema type for event mapping
+
 
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
@@ -58,6 +63,9 @@ export default function Home() {
   const [newlyAddedEventId, setNewlyAddedEventId] = React.useState<string | null>(null); // State for highlighting new event
   const quickAddFormRef = React.useRef<HTMLDivElement>(null); // Ref for the quick add form container
   const [bottomPadding, setBottomPadding] = React.useState(140); // Initial bottom padding
+  const { toast } = useToast(); // Initialize toast hook
+  const [isAiLoading, setIsAiLoading] = React.useState(false); // State for AI loading
+
 
    // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
@@ -74,7 +82,7 @@ export default function Home() {
         const formHeight = quickAddFormRef.current.offsetHeight;
         // Estimate search trigger area height (adjust as needed)
         const searchTriggerHeight = isSearchExpanded ? 80 : 60; // Approximate height
-        setBottomPadding(formHeight + searchTriggerHeight);
+        setBottomPadding(formHeight + searchTriggerHeight + 20); // Added buffer
       }
     };
 
@@ -166,6 +174,52 @@ export default function Home() {
     });
   }, [allEvents, searchTerm, selectedEventType]);
 
+    // Function to handle AI summarization
+    const handleAiSummarize = async () => {
+        const query = searchTerm.trim();
+        if (!query) {
+            toast({
+                title: "请输入查询",
+                description: "请输入您想让 AI 总结的内容。",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Prepare events for AI (convert timestamp to ISO string)
+        const eventsForAi: TimelineEventInput[] = filteredEvents.map(event => ({
+            ...event,
+            timestamp: event.timestamp.toISOString(), // Convert Date to ISO string
+        }));
+
+        setIsAiLoading(true);
+        try {
+            const input: SummarizeEventsInput = { query, events: eventsForAi };
+            const result = await summarizeEvents(input);
+
+            // Display the summary in a toast or alert dialog
+            toast({
+                title: "AI 总结",
+                description: (
+                    <div className="max-h-60 overflow-y-auto whitespace-pre-wrap">
+                        {result.summary}
+                    </div>
+                ),
+                duration: 9000, // Show longer for reading
+            });
+
+        } catch (error) {
+            console.error("AI Summarization Error:", error);
+            toast({
+                title: "AI 总结出错",
+                description: "无法获取 AI 总结。请稍后再试。",
+                variant: "destructive",
+            });
+        } finally {
+            setIsAiLoading(false);
+        }
+    };
+
 
   // Render only on the client to avoid hydration issues with Date formatting and initial load
   if (!isClient) {
@@ -223,6 +277,20 @@ export default function Home() {
                         onTypeChange={(value) => setSelectedEventType(value as EventType | 'all')}
                         className="w-auto flex-shrink-0" // Adjust styling for inline display
                     />
+                    {/* AI Summarize Button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "h-8 w-8 flex-shrink-0 text-foreground/80 hover:text-primary",
+                            isAiLoading && "animate-spin" // Add spin animation when loading
+                        )}
+                        onClick={handleAiSummarize}
+                        disabled={isAiLoading || !searchTerm.trim()} // Disable if loading or search term is empty
+                        aria-label="AI 总结"
+                      >
+                        {isAiLoading ? <Loader2 className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
+                      </Button>
                         <Button
                         variant="ghost"
                         size="icon"
@@ -240,6 +308,8 @@ export default function Home() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
+                        // Position this container slightly higher to avoid overlap
+                        className="relative z-10" // Ensure it's above the form footer but below expanded search
                      >
                          {/* Adjusted class for size and gradient */}
                         <Button
@@ -277,3 +347,4 @@ export default function Home() {
     </main>
   );
 }
+
