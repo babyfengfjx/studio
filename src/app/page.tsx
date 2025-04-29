@@ -364,9 +364,8 @@ export default function Home() {
          <div className="container mx-auto max-w-4xl relative pointer-events-auto p-4"> {/* Added padding here */}
            {/* Quick Add Form takes full width within the centered container */}
            <div className="w-full relative"> {/* Make this relative for absolute positioning of search */}
-              <QuickAddEventForm onAddEvent={handleAddEvent} />
-                {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely INSIDE the quick add form's relative parent */}
-                 <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-[-10px] pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, adjusted positioning */}
+              {/* Search Trigger / Expanded Search Bar Area - Positioned above the Quick Add Form */}
+               <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Adjusted margin */}
                     <AnimatePresence mode="wait">
                     {isSearchExpanded ? (
                         <motion.div
@@ -426,7 +425,7 @@ export default function Home() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
                             transition={{ duration: 0.15, ease: 'easeOut' }}
-                             className="relative z-10 mb-[-10px]" // Adjusted positioning closer to form
+                            className="relative z-10" // Removed positioning adjustments, position controlled by parent div
                         >
                              <Button
                                 id="search-trigger-button" // Add ID for click outside check
@@ -445,6 +444,8 @@ export default function Home() {
                     )}
                     </AnimatePresence>
                 </div>
+                 {/* Quick Add Form is now below the search trigger area */}
+                <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
 
          </div>
