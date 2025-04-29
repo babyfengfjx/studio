@@ -5,7 +5,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags } from "lucide-react";
+import { Paperclip, Image as ImageIcon, XCircle, StickyNote, CheckSquare, CalendarCheck, Tags, Upload } from "lucide-react"; // Added Upload icon
 import { motion } from 'framer-motion';
 
 import { Button } from "@/components/ui/button";
@@ -74,15 +74,17 @@ const formSchema = z.object({
     .optional()
     .refine(
         (files) => {
-            if (!isBrowser || !files || !(files instanceof FileList)) return true; // Skip on server or if not a FileList
-            return files.length === 0 || files[0].size <= MAX_FILE_SIZE;
+            // Check if files is a FileList and has at least one file before accessing properties
+            if (!isBrowser || !files || !(files instanceof FileList) || files.length === 0) return true; // Skip on server or if no files
+            return files[0].size <= MAX_FILE_SIZE;
         },
         `图片大小不能超过 5MB。`
     )
     .refine(
         (files) => {
-            if (!isBrowser || !files || !(files instanceof FileList)) return true; // Skip on server or if not a FileList
-            return files.length === 0 || ALLOWED_IMAGE_TYPES.includes(files[0].type);
+             // Check if files is a FileList and has at least one file before accessing properties
+             if (!isBrowser || !files || !(files instanceof FileList) || files.length === 0) return true; // Skip on server or if no files
+            return ALLOWED_IMAGE_TYPES.includes(files[0].type);
         },
         "只允许上传 JPG, PNG, WEBP, GIF 格式的图片。"
     ),
@@ -90,8 +92,9 @@ const formSchema = z.object({
     .optional()
      .refine(
         (files) => {
-             if (!isBrowser || !files || !(files instanceof FileList)) return true; // Skip on server or if not a FileList
-            return files.length === 0 || files[0].size <= MAX_FILE_SIZE;
+            // Check if files is a FileList and has at least one file before accessing properties
+            if (!isBrowser || !files || !(files instanceof FileList) || files.length === 0) return true; // Skip on server or if no files
+            return files[0].size <= MAX_FILE_SIZE;
         },
         `附件大小不能超过 5MB。`
     )
@@ -111,6 +114,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    // Store initial values separately to manage preview states
    const [initialImageUrl, setInitialImageUrl] = React.useState<string | undefined>(undefined);
    const [initialAttachmentName, setInitialAttachmentName] = React.useState<string | undefined>(undefined);
+   const [imageFileName, setImageFileName] = React.useState<string | null>(null); // State for selected image file name
    const [attachmentName, setAttachmentName] = React.useState<string | null>(null);
    // Flags to track if the user wants to clear existing files
    const [clearExistingImage, setClearExistingImage] = React.useState(false);
@@ -119,6 +123,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    const [showTypeSelect, setShowTypeSelect] = React.useState(true); // Default to true for edit
    const [showImageUpload, setShowImageUpload] = React.useState(false);
    const [showAttachmentUpload, setShowAttachmentUpload] = React.useState(false);
+
+   const imageInputRef = React.useRef<HTMLInputElement>(null);
+   const attachmentInputRef = React.useRef<HTMLInputElement>(null);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -149,6 +156,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         setInitialImageUrl(event.imageUrl);
         setInitialAttachmentName(event.attachment?.name);
         setAttachmentName(event.attachment?.name ?? null); // Show current attachment name initially
+        setImageFileName(null); // Reset selected image file name
 
         // Decide initial visibility based on whether the event HAS these properties
         setShowTypeSelect(true); // Keep type always visible/toggleable for editing
@@ -170,6 +178,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         setInitialImageUrl(undefined);
         setInitialAttachmentName(undefined);
         setAttachmentName(null);
+        setImageFileName(null);
         setClearExistingImage(false);
         setClearExistingAttachment(false);
         // Reset visibility toggles
@@ -177,7 +186,7 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         setShowImageUpload(false);
         setShowAttachmentUpload(false);
     }
-}, [event, isOpen, form]);
+ }, [event, isOpen, form]);
 
 
 
@@ -202,6 +211,24 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
         }
    }, [attachmentFile, initialAttachmentName, clearExistingAttachment, form]); // Added form dep
 
+    // Update image file name display
+    React.useEffect(() => {
+        if (imageFile && imageFile instanceof FileList && imageFile.length > 0) {
+            const file = imageFile[0];
+            if (file.size <= MAX_FILE_SIZE && ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                setImageFileName(file.name);
+                setClearExistingImage(false);
+            } else {
+                setImageFileName(null); // Clear name if file is invalid
+                // Optionally clear the form value if invalid file selected?
+                // form.setValue("image", undefined);
+            }
+        } else {
+            setImageFileName(null); // Clear name if no file is selected
+        }
+    }, [imageFile, form]);
+
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!event) return;
@@ -219,13 +246,13 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
     const imageInput = values.image as unknown as FileList | undefined; // Type assertion
     if (imageInput && imageInput.length > 0) {
         const file = imageInput[0];
-        if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_FILE_SIZE) {
-            updatedData.imageUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(file);
-            });
-        }
+        // Validation is done by Zod and useEffect, assume file is valid here if present
+        updatedData.imageUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+        });
+
     } else if (clearExistingImage) {
         updatedData.imageUrl = undefined; // Explicitly set to undefined to clear
     } // If neither new image nor clear flag, existing imageUrl remains implicitly unchanged
@@ -235,10 +262,10 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
      const attachmentInput = values.attachment as unknown as FileList | undefined; // Type assertion
      if (attachmentInput && attachmentInput.length > 0) {
          const file = attachmentInput[0];
-          if (file.size <= MAX_FILE_SIZE) {
-            // In a real app, upload the file here and get a URL/identifier
-            updatedData.attachment = { name: file.name };
-         }
+          // Validation is done by Zod and useEffect, assume file is valid here if present
+         // In a real app, upload the file here and get a URL/identifier
+         updatedData.attachment = { name: file.name };
+
      } else if (clearExistingAttachment) {
          updatedData.attachment = undefined; // Explicitly set to undefined to clear
      } // If neither new attachment nor clear flag, existing attachment remains implicitly unchanged
@@ -258,6 +285,8 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    const handleClearImage = () => {
         form.setValue("image", undefined); // Clear file input in form
         setClearExistingImage(true); // Mark existing image for removal on save
+        setImageFileName(null); // Clear display name
+        if (imageInputRef.current) imageInputRef.current.value = ""; // Reset input element
         // Optional: Hide the input again?
         // setShowImageUpload(false);
    };
@@ -266,7 +295,8 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
    const handleClearAttachment = () => {
         form.setValue("attachment", undefined); // Clear file input in form
         setClearExistingAttachment(true); // Mark existing attachment for removal on save
-        // Name cleared by useEffect
+        setAttachmentName(null); // Name cleared by useEffect
+        if (attachmentInputRef.current) attachmentInputRef.current.value = ""; // Reset input element
         // Optional: Hide the input again?
         // setShowAttachmentUpload(false);
    };
@@ -278,8 +308,9 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
 
   return (
     <TooltipProvider>
+        {/* Added max-h and overflow-y-auto to DialogContent */}
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[480px]"> {/* Increased width slightly */}
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] flex flex-col"> {/* Increased width, added flex props */}
             <DialogHeader>
             {/* Display derived title for context */}
             <DialogTitle className="truncate pr-8">{displayTitle}</DialogTitle>
@@ -287,179 +318,215 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                  更新事件详情。点击下方图标编辑类型、图片或附件。 {/* Updated Description */}
             </DialogDescription>
             </DialogHeader>
-            <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
+            {/* Form container scrolls */}
+            <div className="flex-grow overflow-y-auto pr-2 -mr-6 pl-6"> {/* Adjusted padding */}
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4"> {/* Removed scroll from form */}
 
-                 {/* Title input removed */}
+                    {/* Title input removed */}
 
-                {/* Description (Now the primary content input) */}
-                 <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                        <FormItem>
-                         {/* <FormLabel>内容</FormLabel> Remove label or change to "内容" */}
-                        <FormControl>
-                            <Textarea
-                            placeholder="编辑事件内容..." // Updated placeholder
-                            className="resize-none min-h-[150px] text-base" // Increased min-height
-                            {...field}
-                            value={field.value ?? ""}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                {/* --- Conditionally Rendered Fields --- */}
-
-                {/* Event Type Selection */}
-                {showTypeSelect && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                        <FormField
+                    {/* Description (Now the primary content input) */}
+                    <FormField
                         control={form.control}
-                        name="eventType"
+                        name="description"
                         render={({ field }) => (
-                            <FormItem className="mt-4">
-                            <FormLabel>事件类型</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} /* Controlled component */ >
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="选择事件类型..." />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                <SelectItem value="note">
-                                    <div className="flex items-center gap-2">
-                                    <StickyNote className="h-4 w-4" /> 笔记
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="todo">
-                                    <div className="flex items-center gap-2">
-                                        <CheckSquare className="h-4 w-4" /> 待办
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="schedule">
-                                    <div className="flex items-center gap-2">
-                                        <CalendarCheck className="h-4 w-4" /> 日程
-                                    </div>
-                                </SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <FormItem>
+                            {/* <FormLabel>内容</FormLabel> Remove label or change to "内容" */}
+                            <FormControl>
+                                <Textarea
+                                placeholder="编辑事件内容..." // Updated placeholder
+                                className="resize-none min-h-[150px] text-base" // Increased min-height
+                                {...field}
+                                value={field.value ?? ""}
+                                />
+                            </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
-                        />
-                    </motion.div>
-                )}
+                    />
 
-                {/* Image Upload */}
-                {showImageUpload && (
-                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                        <FormField
-                        control={form.control}
-                        name="image"
-                        render={({ field: { onChange, onBlur, name, ref } }) => (
-                            <FormItem className="mt-4">
-                                <FormLabel className="flex items-center gap-2">
-                                    <ImageIcon className="h-4 w-4" /> {initialImageUrl ? "替换图片" : "上传图片"} (可选, 最多 5MB)
-                                </FormLabel>
-                                <div className="flex items-center gap-2"> {/* Wrap Input and Button */}
+                    {/* --- Conditionally Rendered Fields --- */}
+
+                    {/* Event Type Selection */}
+                    {showTypeSelect && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                            <FormField
+                            control={form.control}
+                            name="eventType"
+                            render={({ field }) => (
+                                <FormItem className="mt-4">
+                                <FormLabel>事件类型</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} /* Controlled component */ >
                                     <FormControl>
-                                        <Input
-                                            type="file"
-                                            accept={ALLOWED_IMAGE_TYPES.join(",")}
-                                            onChange={(e) => {
-                                                onChange(e.target.files);
-                                                setClearExistingImage(false); // Selecting new file cancels clear intent
-                                            }}
-                                            onBlur={onBlur}
-                                            name={name}
-                                            ref={ref}
-                                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                                        />
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="选择事件类型..." />
+                                        </SelectTrigger>
                                     </FormControl>
-                                    {/* Clear Image Button */}
-                                    {(form.getValues("image") || (initialImageUrl && !clearExistingImage)) && (
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                            onClick={handleClearImage}
-                                            aria-label="清除图片"
-                                        >
-                                            <XCircle className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                                <FormDescription>
-                                    {initialImageUrl && !form.getValues("image") && !clearExistingImage ? `当前图片: ${initialImageUrl.substring(0,30)}...` : ""}
-                                    {initialImageUrl && clearExistingImage ? "当前图片将被移除。" : ""}
-                                    {form.getValues("image") ? "已选择新图片。" : ""}
-                                </FormDescription>
+                                    <SelectContent>
+                                    <SelectItem value="note">
+                                        <div className="flex items-center gap-2">
+                                        <StickyNote className="h-4 w-4" /> 笔记
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="todo">
+                                        <div className="flex items-center gap-2">
+                                            <CheckSquare className="h-4 w-4" /> 待办
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="schedule">
+                                        <div className="flex items-center gap-2">
+                                            <CalendarCheck className="h-4 w-4" /> 日程
+                                        </div>
+                                    </SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                     </motion.div>
-                 )}
+                                </FormItem>
+                            )}
+                            />
+                        </motion.div>
+                    )}
 
-                {/* Attachment Upload */}
-                 {showAttachmentUpload && (
-                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                        <FormField
-                        control={form.control}
-                        name="attachment"
-                        render={({ field: { onChange, onBlur, name, ref } }) => (
-                            <FormItem className="mt-4">
-                                <FormLabel className="flex items-center gap-2">
-                                    <Paperclip className="h-4 w-4" /> {initialAttachmentName ? "替换附件" : "添加附件"} (可选, 最多 5MB)
-                                </FormLabel>
-                                <div className="flex items-center gap-2"> {/* Wrap Input and Button */}
-                                    <FormControl>
-                                        <Input
-                                            type="file"
-                                            onChange={(e) => {
-                                                onChange(e.target.files);
-                                                // setClearExistingAttachment(false); // Handled by useEffect now
-                                            }}
-                                            onBlur={onBlur}
-                                            name={name}
-                                            ref={ref}
-                                            className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
-                                        />
-                                    </FormControl>
-                                    {/* Clear Attachment Button */}
-                                    {(form.getValues("attachment") || (initialAttachmentName && !clearExistingAttachment)) && (
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                            onClick={handleClearAttachment}
-                                            aria-label="清除附件"
-                                        >
-                                            <XCircle className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                                <FormDescription>
-                                    {attachmentName && !form.getValues("attachment") && !clearExistingAttachment ? `当前附件: ${attachmentName}` : ""}
-                                    {initialAttachmentName && clearExistingAttachment ? "当前附件将被移除。" : ""}
-                                    {form.getValues("attachment") && attachmentName ? `已选择新附件: ${attachmentName}` : ""}
-                                </FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                     </motion.div>
-                 )}
+                   {/* Image Upload */}
+                    {showImageUpload && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                            <FormField
+                                control={form.control}
+                                name="image"
+                                render={({ field }) => ( // Destructure field here but don't spread it onto Input
+                                    <FormItem className="mt-4">
+                                        <FormLabel className="flex items-center gap-2">
+                                            <ImageIcon className="h-4 w-4" /> {initialImageUrl ? "替换图片" : "上传图片"} (可选, 最多 5MB)
+                                        </FormLabel>
+                                        {/* Custom File Input Look */}
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => imageInputRef.current?.click()}
+                                                className="flex-shrink-0"
+                                            >
+                                                <Upload className="h-4 w-4 mr-2" />
+                                                选择文件
+                                            </Button>
+                                            <span className="text-sm text-muted-foreground truncate flex-1">
+                                                {imageFileName ?? (clearExistingImage ? "无文件" : "未选择文件")}
+                                            </span>
+                                            {/* Clear Button */}
+                                            {(imageFileName || (initialImageUrl && !clearExistingImage)) && (
+                                                 <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
+                                                    onClick={handleClearImage}
+                                                    aria-label="清除图片"
+                                                >
+                                                    <XCircle className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                        {/* Hidden Actual Input */}
+                                        <FormControl>
+                                            <Input
+                                                type="file"
+                                                accept={ALLOWED_IMAGE_TYPES.join(",")}
+                                                className="hidden" // Hide the default input
+                                                ref={imageInputRef} // Assign ref
+                                                onChange={(e) => {
+                                                    form.setValue("image", e.target.files); // Update form state correctly
+                                                    // Optionally trigger validation if needed: form.trigger("image");
+                                                }}
+                                                onBlur={field.onBlur}
+                                                name={field.name}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>
+                                            {initialImageUrl && !imageFileName && !clearExistingImage ? `当前图片: ${initialImageUrl.substring(initialImageUrl.lastIndexOf('/') + 1) || '图片'}` : ""}
+                                            {initialImageUrl && clearExistingImage ? "当前图片将被移除。" : ""}
+                                            {/* {imageFileName ? `已选择: ${imageFileName}` : ""} */}
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </motion.div>
+                    )}
 
+                    {/* Attachment Upload */}
+                    {showAttachmentUpload && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                            <FormField
+                                control={form.control}
+                                name="attachment"
+                                render={({ field }) => ( // Destructure field here
+                                    <FormItem className="mt-4">
+                                        <FormLabel className="flex items-center gap-2">
+                                            <Paperclip className="h-4 w-4" /> {initialAttachmentName ? "替换附件" : "添加附件"} (可选, 最多 5MB)
+                                        </FormLabel>
+                                        {/* Custom File Input Look */}
+                                         <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => attachmentInputRef.current?.click()}
+                                                className="flex-shrink-0"
+                                            >
+                                                <Upload className="h-4 w-4 mr-2" />
+                                                选择文件
+                                            </Button>
+                                            <span className="text-sm text-muted-foreground truncate flex-1">
+                                                {attachmentName ?? (clearExistingAttachment ? "无文件" : "未选择文件")}
+                                            </span>
+                                            {/* Clear Button */}
+                                            {(attachmentName || (initialAttachmentName && !clearExistingAttachment)) && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
+                                                    onClick={handleClearAttachment}
+                                                    aria-label="清除附件"
+                                                >
+                                                    <XCircle className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                         {/* Hidden Actual Input */}
+                                        <FormControl>
+                                            <Input
+                                                type="file"
+                                                className="hidden" // Hide the default input
+                                                ref={attachmentInputRef} // Assign ref
+                                                onChange={(e) => {
+                                                    form.setValue("attachment", e.target.files); // Update form state
+                                                     // Handled by useEffect now: setClearExistingAttachment(false);
+                                                }}
+                                                onBlur={field.onBlur}
+                                                name={field.name}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>
+                                            {initialAttachmentName && !attachmentName && !clearExistingAttachment ? `当前附件: ${initialAttachmentName}` : ""}
+                                            {initialAttachmentName && clearExistingAttachment ? "当前附件将被移除。" : ""}
+                                            {/* {attachmentName ? `已选择: ${attachmentName}` : ""} */}
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </motion.div>
+                    )}
 
-                {/* Action Icons & Footer */}
-                 <div className="flex items-center gap-2 pt-4 border-t mt-auto">
+                     {/* This empty div ensures the footer doesn't overlap last form item */}
+                     <div className="h-1"></div>
+
+                </form>
+                </Form>
+            </div>
+            {/* Action Icons & Footer - Placed outside the scrolling container */}
+             <DialogFooter className="pt-4 border-t sticky bottom-0 bg-background px-6 pb-6 -mx-6 -mb-6 mt-auto"> {/* Adjust padding */}
+                <div className="flex items-center gap-2 w-full">
                      <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -513,12 +580,14 @@ export function EditEventForm({ event, isOpen, onOpenChange, onEditEvent }: Edit
                     </Tooltip>
                      <div className="flex-grow"></div> {/* Spacer */}
                     <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>取消</Button>
-                     <Button type="submit" disabled={!descriptionValue?.trim()}>保存更改</Button> {/* Disable save if description is empty */}
+                    {/* Trigger form submission via formRef */}
+                     <Button type="button" onClick={() => form.handleSubmit(onSubmit)()} disabled={!descriptionValue?.trim()}>保存更改</Button> {/* Disable save if description is empty */}
                  </div>
-            </form>
-            </Form>
+             </DialogFooter>
         </DialogContent>
         </Dialog>
     </TooltipProvider>
   );
 }
+
+    
