@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { Search, X, Brain, Loader2, List, Rows } from 'lucide-react'; // Import view icons
+import { Search, X, Brain, Loader2, List, Rows, Settings } from 'lucide-react'; // Import view icons, Settings icon
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timeline } from '@/components/timeline';
 import { EventList } from '@/components/event-list'; // Import EventList component
@@ -10,7 +10,7 @@ import { EditEventForm } from '@/components/edit-event-form';
 import { SearchBar } from '@/components/search-bar';
 import { FilterControls } from '@/components/filter-controls';
 import { QuickAddEventForm } from '@/components/quick-add-event-form';
-import { AuthControls } from '@/components/auth/auth-controls'; // Import AuthControls
+import { WebdavSettings } from '@/components/webdav-settings'; // Import WebdavSettings
 import { mockEvents } from '@/data/mock-events';
 import type { TimelineEvent, EventType, ViewMode } from '@/types/event'; // Add ViewMode type
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { summarizeEvents } from '@/ai/flows/summarize-events-flow'; // Import AI flow function
 import type { SummarizeEventsInput } from '@/ai/schemas/summarize-events-schema'; // Import AI input type from new schema file
 import type { TimelineEventInput } from '@/ai/schemas/event-schema'; // Import AI schema type for event mapping
-import { useAuth } from '@/context/auth-context'; // Import useAuth
+// Removed useAuth import
 
 // Helper function to sort events by timestamp descending (newest first)
 const sortEventsDescending = (events: TimelineEvent[]): TimelineEvent[] => {
@@ -56,7 +56,7 @@ const deriveTitle = (description?: string): string => {
 
 
 export default function Home() {
-  const { user } = useAuth(); // Get user from auth context
+  // Removed user state from useAuth
   const [allEvents, setAllEvents] = React.useState<TimelineEvent[]>([]); // Store all events
   const [editingEvent, setEditingEvent] = React.useState<TimelineEvent | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -70,14 +70,15 @@ export default function Home() {
   const { toast } = useToast(); // Initialize toast hook
   const [isAiLoading, setIsAiLoading] = React.useState(false); // State for AI loading
   const [viewMode, setViewMode] = React.useState<ViewMode>('timeline'); // State for view mode
+  const [isWebdavSettingsOpen, setIsWebdavSettingsOpen] = React.useState(false); // State for WebDAV settings dialog
 
    // Set isClient to true only on the client side and load initial data
   React.useEffect(() => {
     setIsClient(true);
-    // TODO: Replace mock data loading with fetching user-specific data if logged in
-    // For now, always load mock data
+    // Load initial data (e.g., from local storage, WebDAV, or start with mock)
+    // TODO: Implement actual data loading/saving strategy (e.g., WebDAV sync)
     setAllEvents(sortEventsDescending(mockEvents));
-  }, [user]); // Reload data if user changes (login/logout)
+  }, []); // Removed user dependency
 
    // Calculate bottom padding based on quick add form height
    React.useEffect(() => {
@@ -117,9 +118,8 @@ export default function Home() {
 
   // Updated handleAddEvent: Title is derived from description
   const handleAddEvent = (newEventData: Omit<TimelineEvent, 'id' | 'timestamp' | 'title'>) => {
-     // TODO: If user is logged in, save to user's data store (e.g., Firestore)
-     // If not logged in, add to local state (current behavior)
-     console.log("Adding event (User:", user ? user.uid : "Guest", ")");
+     // TODO: Save to chosen data store (e.g., local state, trigger WebDAV save)
+     console.log("Adding event");
 
      const derivedTitle = deriveTitle(newEventData.description);
     const newEvent: TimelineEvent = {
@@ -130,7 +130,6 @@ export default function Home() {
       eventType: newEventData.eventType,
       imageUrl: newEventData.imageUrl,
       attachment: newEventData.attachment,
-      // userId: user?.uid // Associate with user if logged in
     };
     // Add new event and resort descending (newest first)
     setAllEvents((prevEvents) => {
@@ -155,8 +154,8 @@ export default function Home() {
   };
 
   const handleDeleteEvent = (id: string) => {
-    // TODO: Implement deletion from user's data store if logged in
-    console.log("Deleting event:", id, "(User:", user ? user.uid : "Guest", ")");
+    // TODO: Implement deletion from chosen data store
+    console.log("Deleting event:", id);
     const eventToDelete = allEvents.find(e => e.id === id);
     // Filter out the event and resort (though filtering doesn't change order)
     setAllEvents((prevEvents) => sortEventsDescending(prevEvents.filter((event) => event.id !== id)));
@@ -171,8 +170,8 @@ export default function Home() {
   // Function to handle the actual edit submission
   // Accepts Partial update data
  const handleEditEvent = (id: string, updatedData: Partial<Omit<TimelineEvent, 'id' | 'timestamp'>>) => {
-     // TODO: Implement update in user's data store if logged in
-     console.log("Editing event:", id, "(User:", user ? user.uid : "Guest", ")");
+     // TODO: Implement update in chosen data store
+     console.log("Editing event:", id);
 
      const originalEvent = allEvents.find(e => e.id === id);
      if (!originalEvent) return; // Guard clause
@@ -271,9 +270,11 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-blue-50 via-teal-50 to-purple-100 dark:from-blue-900 dark:via-teal-900 dark:to-purple-950 p-4 relative">
-       {/* Authentication Controls - Top Right */}
+       {/* WebDAV Settings Button - Top Right */}
        <div className="absolute top-4 right-4 z-50">
-         <AuthControls />
+         <Button variant="ghost" size="icon" onClick={() => setIsWebdavSettingsOpen(true)} aria-label="数据同步设置">
+           <Settings className="h-5 w-5" />
+         </Button>
        </div>
 
       {/* Main Content Area - Adjust bottom padding dynamically */}
@@ -325,12 +326,8 @@ export default function Home() {
          <div className="container mx-auto max-w-4xl relative pointer-events-auto p-4"> {/* Added padding here */}
            {/* Quick Add Form takes full width within the centered container */}
            <div className="w-full">
-              {/* Only show quick add if user is logged in OR if guest usage is allowed */}
-              {user ? (
-                 <QuickAddEventForm onAddEvent={handleAddEvent} />
-              ) : (
-                 <div className="text-center text-muted-foreground p-4 bg-muted rounded-lg">请登录后添加事件。</div>
-              )}
+               {/* Always show quick add form as there's no user login anymore */}
+              <QuickAddEventForm onAddEvent={handleAddEvent} />
            </div>
            {/* Search Trigger / Expanded Search Bar Area - Positioned absolutely ABOVE the quick add form */}
              <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-auto w-full flex justify-center"> {/* Centered horizontally, mb-2 for spacing */}
@@ -363,7 +360,7 @@ export default function Home() {
                             isAiLoading && "animate-spin" // Add spin animation when loading
                         )}
                         onClick={handleAiSummarize}
-                        disabled={isAiLoading || !searchTerm.trim() || !user} // Disable if loading, no query, or no user
+                        disabled={isAiLoading || !searchTerm.trim()} // Disable if loading or no query
                         aria-label="AI 总结"
                       >
                         {isAiLoading ? <Loader2 className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
@@ -415,6 +412,15 @@ export default function Home() {
         onOpenChange={setIsEditDialogOpen}
         onEditEvent={handleEditEvent}
       />
+
+       {/* WebDAV Settings Dialog */}
+       <WebdavSettings
+         isOpen={isWebdavSettingsOpen}
+         onOpenChange={setIsWebdavSettingsOpen}
+         // Add necessary props for saving/loading settings if needed
+         // onSave={handleSaveWebdavSettings}
+       />
+
       {/* Keep Toaster component in case it's needed elsewhere */}
       <Toaster />
     </main>

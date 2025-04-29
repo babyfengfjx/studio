@@ -13,5 +13,5 @@ export interface TimelineEvent {
     name: string;
     // url?: string; // Keep URL optional/removed if not needed for core functionality
   };
-  userId?: string; // Optional: Associate event with a user
+  // Removed userId field
 }

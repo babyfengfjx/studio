@@ -19,6 +19,7 @@ export const TimelineEventSchema = z.object({
     name: z.string().describe('The name of the attached file.'),
     // url: z.string().url().optional().describe('Optional URL to the stored attachment.') // URL might not be available/needed for summarization
   }).optional().describe('Optional attached file information.'),
+  // Removed userId description
 }).describe('Represents a single event on the timeline.');
 
 export type TimelineEventInput = z.infer<typeof TimelineEventSchema>;

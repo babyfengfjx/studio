@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Using Inter as a clean sans-serif font
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
-import { AuthProvider } from '@/context/auth-context'; // Import AuthProvider
+// Removed AuthProvider import
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' }); // Define variable for Tailwind
 
@@ -18,14 +18,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // Set language to Chinese - REMOVED extra whitespace
+    // Set language to Chinese
     <html lang="zh-CN">
       {/* Apply the font variable to the body */}
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider> {/* Wrap children with AuthProvider */}
-          {children}
-          <Toaster /> {/* Add Toaster here */}
-        </AuthProvider>
+        {/* Removed AuthProvider wrapper */}
+        {children}
+        <Toaster /> {/* Add Toaster here */}
       </body>
     </html>
   );
