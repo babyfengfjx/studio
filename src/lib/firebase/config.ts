@@ -6,9 +6,31 @@ import { getAuth, Auth } from 'firebase/auth';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-// IMPORTANT: Ensure these environment variables are correctly set in your .env.local file
-// and prefixed with NEXT_PUBLIC_ for client-side access.
-// YOU MUST RESTART your development server after creating or modifying .env.local
+// ========================================================================
+// IMPORTANT: Firebase Credentials Required!
+// ========================================================================
+// You MUST create a file named `.env.local` in the root of your project
+// (next to package.json) and add your Firebase project's configuration keys.
+//
+// The keys MUST be prefixed with `NEXT_PUBLIC_` for Next.js to expose them
+// to the browser.
+//
+// Example `.env.local` file contents:
+//
+// NEXT_PUBLIC_FIREBASE_API_KEY=YOUR_API_KEY
+// NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=YOUR_AUTH_DOMAIN
+// NEXT_PUBLIC_FIREBASE_PROJECT_ID=YOUR_PROJECT_ID
+// NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=YOUR_STORAGE_BUCKET
+// NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=YOUR_MESSAGING_SENDER_ID
+// NEXT_PUBLIC_FIREBASE_APP_ID=YOUR_APP_ID
+// # NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=YOUR_MEASUREMENT_ID (Optional)
+//
+// *** You MUST restart your development server (e.g., `npm run dev` or `yarn dev`)
+// *** after creating or modifying the `.env.local` file for the changes to take effect.
+//
+// The "auth/api-key-not-valid" error means these environment variables
+// are missing, incorrect, or the server wasn't restarted after changes.
+// ========================================================================
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -33,7 +55,7 @@ if (!getApps().length) {
     );
     // Throw an error during development to make the configuration issue explicit.
     // This prevents the application from potentially running with invalid credentials.
-    throw new Error("Invalid Firebase configuration. Check browser console and .env.local file.");
+    throw new Error("Invalid Firebase configuration. Check browser console and ensure `.env.local` is set up correctly and the server was restarted.");
   }
   app = initializeApp(firebaseConfig);
 } else {
@@ -46,3 +68,4 @@ const auth: Auth = getAuth(app);
 
 export { app, auth };
 // export { app, auth, db, storage }; // Export db/storage if needed
+
